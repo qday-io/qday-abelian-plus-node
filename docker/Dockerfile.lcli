@@ -1,0 +1,38 @@
+# Lighthouse lcli — not shipped in sigp/lighthouse runtime images.
+# Uses the locally cached sigp/lighthouse image (no docker.io rust/debian pulls).
+# Build: docker build -t abelian-lcli:latest -f docker/Dockerfile.lcli docker
+#
+# deposit-contract/*.json are vendored so compile does not hit raw.githubusercontent.com.
+
+ARG LIGHTHOUSE_IMAGE=sigp/lighthouse:latest
+ARG LIGHTHOUSE_REF=stable
+
+FROM ${LIGHTHOUSE_IMAGE} AS builder
+USER root
+ARG LIGHTHOUSE_REF
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake libclang-dev curl ca-certificates pkg-config libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+ENV RUSTUP_HOME=/root/.rustup CARGO_HOME=/root/.cargo
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --default-toolchain stable --profile minimal
+ENV PATH="/root/.cargo/bin:${PATH}"
+COPY deposit-contract/ /deposit-contract/
+ENV LIGHTHOUSE_DEPOSIT_CONTRACT_SPEC_URL=file:///deposit-contract/validator_registration.json
+ENV LIGHTHOUSE_DEPOSIT_CONTRACT_TESTNET_URL=file:///deposit-contract/unsafe_validator_registration.json
+RUN mkdir /lighthouse \
+    && for i in 1 2 3 4 5; do \
+         curl -fsSL --retry 3 --retry-delay 10 \
+           "https://github.com/sigp/lighthouse/archive/refs/heads/${LIGHTHOUSE_REF}.tar.gz" \
+           | tar xz --strip-components=1 -C /lighthouse \
+         && break; \
+         rm -rf /lighthouse/*; \
+       done \
+    && test -f /lighthouse/lcli/Cargo.toml
+WORKDIR /lighthouse
+RUN cargo install --path lcli --locked
+
+FROM ${LIGHTHOUSE_IMAGE}
+USER root
+COPY --from=builder /root/.cargo/bin/lcli /usr/local/bin/lcli
+ENTRYPOINT ["lcli"]

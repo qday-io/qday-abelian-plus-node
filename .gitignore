@@ -1,0 +1,32 @@
+# Secrets
+jwt.hex
+jwt.mainnet-eq.hex
+
+# Built binaries / source of reth
+/reth/target/
+/reth/.git/
+
+# Runtime data dirs
+reth-data/
+beacon-data/
+validator-data/
+lighthouse-data/
+reth-dev-data/
+reth-dev-data-mainnet-eq/
+reth-data-mainnet-eq/
+beacon-data-mainnet-eq/
+validator-data-mainnet-eq/
+testnet-mainnet-eq/
+
+# Generated consensus-layer testnet artifacts
+testnet/*
+!testnet/.gitkeep
+
+# Generated validator keystores / secrets
+validators/
+secrets/
+l1-mainnet-eq/
+
+# Logs
+*.log
+logs/
