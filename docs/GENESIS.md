@@ -44,6 +44,8 @@ Or let `docker-up.sh` / `docker-setup-genesis.sh` call it automatically.
 The renderer preserves **non-mnemonic** `alloc` entries already in the genesis file
 (e.g. the `0x…00ff` placeholder in mainnet-equivalent genesis).
 
+> See [`.env.example`](../.env.example) for the full variable listing with defaults and descriptions.
+
 After changing genesis fields that affect the block hash:
 
 ```bash
@@ -194,3 +196,11 @@ not derived from `MNEMONIC`):
 The execution genesis block hash (derived from these fields) is embedded into the
 consensus-layer genesis during `docker-setup-genesis.sh`. If you change header or `alloc`
 fields, the hash changes — which is why Tier 2 requires regenerating `testnet/`.
+
+---
+
+## See also
+
+- [`.env.example`](../.env.example) — full variable reference (images, ports, paths, accounts, validators)
+- [`docs/SCRIPTS.md`](SCRIPTS.md) — script reference
+- [`docs/DOCKER.md`](DOCKER.md) — deployment guide

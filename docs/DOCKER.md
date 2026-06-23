@@ -10,6 +10,8 @@
 | `docker-up.sh` | **Yes** — renders genesis from `vars.env`, then starts compose |
 | `docker-setup-genesis.sh` | **Yes** for PoS — one-time genesis ceremony in containers |
 | `vars.env` / `examples/vars.mainnet-equivalent.env` | **Yes** — paths, chainId, mnemonic, account balances |
+| `.env.example` | Optional — full variable reference with defaults and descriptions |
+| `scripts/README.md` | Optional — script catalog with usage examples |
 | `scripts/render-genesis.sh` | Called by `docker-up.sh` and `docker-setup-genesis.sh` |
 | `scripts/healthcheck.sh` / `check.sh` | Optional — verify from host |
 | `python3` + `eth-account` | **Yes** for genesis rendering (`pip install eth-account`) |
@@ -73,7 +75,7 @@ bash scripts/healthcheck.sh
 ```bash
 VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
   -f examples/docker-compose-main.yml --profile dev up -d
-bash scripts/healthcheck.sh --el-only
+VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-only
 ```
 
 **Mainnet-equivalent Tier 2**
@@ -82,7 +84,7 @@ bash scripts/healthcheck.sh --el-only
 bash examples/docker-setup-genesis.sh
 VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
   -f examples/docker-compose-main.yml --profile full up -d
-bash scripts/healthcheck.sh
+VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh
 ```
 
 **Custom account balances (example)**
@@ -111,11 +113,13 @@ docker compose -f examples/docker-compose-main.yml down
 
 | Script | Role |
 | --- | --- |
-| `docker-up.sh` | Runs `render-genesis.sh`, then `docker compose`. Keeps `genesis.json` in sync with `vars.env` on every start. |
-| `docker-setup-genesis.sh` | One-shot PoS ceremony: render genesis, `reth init`, probe genesis hash, `lcli` for `testnet/` + validator keys. Writes `jwt.hex`, `testnet/`, `reth-data/` on the host for volume mounts. |
+| `docker-up.sh` | (1) Source compose env vars → (2) render genesis alloc → (3) `docker compose`. Keeps `genesis.json` in sync with `vars.env` on every start. |
+| `docker-setup-genesis.sh` | One-shot PoS ceremony in 7 steps: (0) render genesis alloc → (1) generate JWT secret → (2) `reth init` + extract genesis block hash → (3) RPC fallback to probe genesis hash → (4) `lcli new-testnet` — CL testnet config → (5) `lcli interop-genesis` — beacon genesis state → (6) `lcli insecure-validators` — validator keystores. Writes `jwt.hex`, `testnet/`, `reth-data/` on the host for volume mounts. |
 
 Compose alone cannot express the Tier 2 ceremony; Tier 1 still needs genesis rendering
 before the Reth container mounts `genesis.json`.
+
+Full variable reference: see [`.env.example`](../.env.example). Script catalog: see [`scripts/README.md`](../scripts/README.md).
 
 ## Images
 
@@ -123,10 +127,11 @@ Pinned in `vars.env` for reproducibility (override by exporting before scripts):
 
 - `RETH_IMAGE` (default `ghcr.io/paradigmxyz/reth:v2.3.0`)
 - `LIGHTHOUSE_IMAGE` (default `sigp/lighthouse:v8.1.3`)
+- `LCLI_IMAGE` (default `abelian-lcli:latest`)
 - `FEE_RECIPIENT` — passed to validator `--suggested-fee-recipient` via compose
 
-`docker-up.sh` exports these from `vars.env` before `docker compose`. See `.env.example`
-if you run bare `docker compose` without `docker-up.sh`.
+`docker-up.sh` exports these (and ports, paths, network params) from `vars.env` via
+`compose-env.sh` before `docker compose`. Full variable reference: see [`.env.example`](../.env.example).
 
 Compose services include healthchecks; Tier 2 beacon/validator wait for EL/BN readiness.
 

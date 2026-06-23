@@ -2,6 +2,8 @@
 
 All scripts assume you run commands from the **repository root** unless noted otherwise.
 
+> Quick catalog with usage examples: [`scripts/README.md`](../scripts/README.md)
+
 Related config files:
 
 | File | Role |
@@ -62,10 +64,9 @@ bash docker-up.sh --profile full logs -f reth
 
 **What it does internally:**
 
-1. Sets `ROOT_DIR`
-2. Sources `scripts/compose-env.sh` (image tags, `FEE_RECIPIENT`, ports)
-3. Runs `scripts/render-genesis.sh`
-4. `exec docker compose "$@"`
+1. Sources `scripts/compose-env.sh` — exports `RETH_IMAGE`, `LIGHTHOUSE_IMAGE`, ports, `FEE_RECIPIENT` for Docker Compose variable interpolation
+2. Runs `scripts/render-genesis.sh` to ensure `genesis.json` `alloc` stays in sync with `vars.env`
+3. `exec docker compose "$@"` — launches containers with the caller's arguments
 
 ---
 
@@ -97,11 +98,13 @@ bash docker-up.sh --profile full up -d
 
 **Steps performed:**
 
-1. Render genesis alloc (`render-genesis.sh`)
-2. Generate `jwt.hex` (if missing)
-3. `reth init` in a container
-4. Read execution genesis block hash
-5. Build/use `abelian-lcli` image and run `lcli new-testnet`, `interop-genesis`, `insecure-validators`
+0. Render genesis alloc from `vars.env` (via `render-genesis.sh`)
+1. Generate `jwt.hex` (Engine API JWT secret, if missing)
+2. `reth init` in a container — initialise datadir, extract execution genesis block hash
+3. RPC fallback — start temp Reth node and query `eth_getBlockByNumber(0x0)` if step 2 failed to produce the hash
+4. Build/use `abelian-lcli` image and run `lcli new-testnet` — CL testnet configuration
+5. `lcli interop-genesis` — beacon chain interop genesis state
+6. `lcli insecure-validators` — validator keystores under `$LCLI_VALIDATORS_BASE`
 
 > Not needed for Tier 1 (`--profile dev`).
 

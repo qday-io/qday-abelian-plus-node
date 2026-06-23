@@ -2,6 +2,23 @@
 # Genesis ceremony via Docker images only (no local reth/lighthouse/lcli binaries).
 # Writes jwt, testnet/, validator keys, and initialises reth datadir on the host.
 #
+# Steps:
+#   (pre) FORCE=1 optionally wipes previous runtime data for a clean slate
+#   0. Render genesis alloc — runs scripts/render-genesis.sh to populate
+#      genesis.json with funded accounts derived from the mnemonic in vars.env
+#   1. Generate JWT secret — 32-byte hex secret for Engine API auth between
+#      execution client (Reth) and consensus client (Lighthouse)
+#   2. reth init — initialises the Reth datadir with the custom genesis file
+#      and extracts the execution genesis block hash from the output
+#   3. RPC fallback — if step 2 failed to produce the hash, start a temporary
+#      Reth node and query eth_getBlockByNumber(0x0) to obtain it
+#   4. lcli new-testnet — creates the Lighthouse testnet configuration with
+#      all fork epochs set to 0, TTD=0 (Post-Merge at genesis), and links
+#      it to the execution genesis hash
+#   5. lcli interop-genesis — generates the beacon chain interop genesis state
+#   6. lcli insecure-validators — generates deterministic insecure validator
+#      keystores under $LCLI_VALIDATORS_BASE for local devnet testing
+#
 # Usage:
 #   bash docker-setup-genesis.sh
 #   FORCE=1 bash docker-setup-genesis.sh
@@ -32,6 +49,8 @@ ensure_lcli_image() {
     exit 1
   fi
 }
+
+PROBE_CONTAINER="${PROBE_CONTAINER:-abelian-reth-probe}"
 
 abs_path() {
   python3 -c 'import os,sys; print(os.path.abspath(sys.argv[1]))' "$1"
@@ -84,8 +103,8 @@ GENESIS_HASH=$(echo "$RETH_INIT_OUT" | sed 's/\x1b\[[0-9;]*m//g' \
 # --- 3. Genesis block hash (RPC fallback) ---
 if [[ -z "$GENESIS_HASH" ]]; then
   echo "==> Reading execution genesis block hash (RPC fallback)"
-  docker rm -f abelian-reth-probe >/dev/null 2>&1 || true
-  docker run -d --name abelian-reth-probe \
+  docker rm -f "$PROBE_CONTAINER" >/dev/null 2>&1 || true
+  docker run -d --name "$PROBE_CONTAINER" \
     -p "127.0.0.1:${RETH_HTTP_PORT}:${RETH_HTTP_PORT}" \
     -v "$GENESIS_FILE:/genesis.json:ro" \
     -v "$RETH_DATADIR:/data" \
@@ -95,7 +114,7 @@ if [[ -z "$GENESIS_HASH" ]]; then
     --http --http.addr 0.0.0.0 --http.port "$RETH_HTTP_PORT" --http.api eth \
     --disable-discovery --authrpc.jwtsecret /jwt.hex >/dev/null
 
-  cleanup_probe() { docker rm -f abelian-reth-probe >/dev/null 2>&1 || true; }
+  cleanup_probe() { docker rm -f "$PROBE_CONTAINER" >/dev/null 2>&1 || true; }
   trap cleanup_probe EXIT
 
   for _ in $(seq 1 30); do

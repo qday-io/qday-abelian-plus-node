@@ -33,7 +33,7 @@ x-reth-dev-cmd: &reth-dev-cmd
   - node
   - --dev
   - --dev.block-time
-  - 2s
+  - ${DEV_BLOCK_TIME:-2s}
   - --chain
   - /genesis.json
   - --http
@@ -41,6 +41,9 @@ x-reth-dev-cmd: &reth-dev-cmd
   - --http.port=8545
   - --http.api=eth,net,web3,txpool,debug,trace
   - --http.corsdomain=*
+  - --ws
+  - --ws.addr=0.0.0.0
+  - --ws.port=8546
 
 x-reth-pos-cmd: &reth-pos-cmd
   - node
@@ -50,6 +53,9 @@ x-reth-pos-cmd: &reth-pos-cmd
   - --http.port=8545
   - --http.api=eth,net,web3,txpool,debug,trace
   - --http.corsdomain=*
+  - --ws
+  - --ws.addr=0.0.0.0
+  - --ws.port=8546
   - --authrpc.addr=0.0.0.0
   - --authrpc.port=8551
   - --authrpc.jwtsecret=/jwt.hex
@@ -66,6 +72,7 @@ services:
       - reth-dev-data:/root/.local/share/reth
     ports:
       - "${RETH_HTTP_PORT:-8545}:8545"
+      - "${RETH_WS_PORT:-8546}:8546"
     healthcheck: *reth-healthcheck
 
   # ---------- Tier 2: dev full PoS ----------
@@ -79,6 +86,7 @@ services:
       - ./reth-data:/root/.local/share/reth
     ports:
       - "${RETH_HTTP_PORT:-8545}:8545"
+      - "${RETH_WS_PORT:-8546}:8546"
       - "${AUTHRPC_PORT:-8551}:8551"
     healthcheck: *reth-healthcheck
 

@@ -23,6 +23,8 @@ testnet/*
 !testnet/.gitkeep
 
 # Generated validator keystores / secrets
+node_1/*
+!node_1/.gitkeep
 validators/
 secrets/
 l1-mainnet-eq/

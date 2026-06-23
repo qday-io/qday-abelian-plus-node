@@ -2,6 +2,16 @@
 # Mainnet-equivalent genesis ceremony via Docker (no local reth/lighthouse/lcli).
 # Writes jwt, testnet/, validator keys, and initialises reth datadir on the host.
 #
+# Steps:
+#   0. Render execution genesis alloc from vars.env + MNEMONIC → genesis.json
+#   1. Generate JWT hex secret (Engine API auth between EL and CL)
+#   2. reth init — initialise reth datadir with custom genesis, extract genesis block hash
+#   3. (RPC fallback) Start a temporary reth node and query eth_getBlockByNumber(0x0)
+#      to obtain the genesis block hash if step 2 failed to produce one
+#   4. lcli new-testnet — create Lighthouse testnet config (fork epochs, TTD=0, validators)
+#   5. lcli interop-genesis — generate beacon chain interop genesis state
+#   6. lcli insecure-validators — generate insecure validator keystores under $LCLI_VALIDATORS_BASE
+#
 # Usage (from repo root):
 #   bash examples/docker-setup-genesis.sh
 #   FORCE=1 bash examples/docker-setup-genesis.sh

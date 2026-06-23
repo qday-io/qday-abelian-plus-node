@@ -1,35 +1,51 @@
 # Docker-only L1
 
-Run everything with **Docker Compose**. No local `reth` / `lighthouse` / `lcli` binaries.
+Private Ethereum L1 devnet running Reth + Lighthouse in **Docker Compose**.
+No local binaries required.
 
-Helper scripts:
-
-| Script | When |
-| --- | --- |
-| `docker-up.sh` | Start nodes — renders genesis from `vars.env`, then runs compose |
-| `docker-setup-genesis.sh` | One-time PoS genesis ceremony (Tier 2 only) |
-| `scripts/reset-dev.sh` | Reset Tier 1 — wipe dev volume, re-render genesis, restart |
-| `scripts/clean-data.sh` | Remove local runtime data dirs (after `docker compose down`) |
-
-Full reference: [`docs/DOCKER.md`](docs/DOCKER.md)
-
-## Prerequisites
-
-- Docker Engine + Docker Compose v2
-- `curl` (verify RPC from host)
-- `python3` + dependencies for genesis rendering & tx tests:
+## Quick Start
 
 ```bash
+# 1. Install dependencies
 pip install -r requirements.txt
+
+# 2. Tier 1 — EL auto-mining (fastest)
+bash docker-up.sh --profile dev up -d
+bash scripts/healthcheck.sh --el-only --tx
+
+# 3. Tier 2 — full PoS (genesis ceremony + start)
+bash docker-setup-genesis.sh
+bash docker-up.sh --profile full up -d
+bash scripts/healthcheck.sh
 ```
+
+Mainnet-equivalent: see [below](#mainnet-equivalent).
+
+---
+
+## Dependencies
+
+| Tool | Version | Required | Purpose |
+| --- | --- | --- | --- |
+| Docker Engine | ≥ 24 | **Yes** | Run Reth + Lighthouse containers |
+| Docker Compose | v2 | **Yes** | Service orchestration (profiles, healthchecks) |
+| `python3` | ≥ 3.10 | **Yes** | Genesis rendering, tx tests, JSON parsing |
+| `eth-account` | ≥ 0.10 | **Yes** | HD wallet derivation (genesis alloc) + tx signing |
+| `curl` | any | Optional | RPC health checks from host |
+| `openssl` | any | Optional | JWT generation (pre-installed on macOS) |
 
 ```bash
-docker compose pull    # optional, first run
+pip install -r requirements.txt    # eth-account
+docker compose pull                # pre-fetch images (optional, first run)
 ```
 
-## Pre-funded accounts
+---
 
-Configure in `vars.env` (or `examples/vars.mainnet-equivalent.env`):
+## Configuration
+
+### Pre-funded accounts
+
+Set in `vars.env` (dev) or `examples/vars.mainnet-equivalent.env`:
 
 ```bash
 MNEMONIC="test test test test test test test test test test test junk"
@@ -37,130 +53,164 @@ GENESIS_ACCOUNT_COUNT=4
 GENESIS_ACCOUNT_BALANCES_ETH="1000000,1000000,1000000,1000000"
 ```
 
-Addresses are derived via `m/44'/60'/0'/0/N` (Hardhat / Anvil path). Before every
-`docker-up.sh` run, `scripts/render-genesis.sh` writes them into `genesis.json` → `alloc`.
+Addresses derived at `m/44'/60'/0'/0/N` (Hardhat / Anvil path). Rendered into
+`genesis.json` → `alloc` on every `docker-up.sh` run.
 
-See [`docs/GENESIS.md`](docs/GENESIS.md) for field reference.
+### Key variables
 
-## Commands
+| Variable | Default | Description |
+| --- | --- | --- |
+| `CHAIN_ID` | `12345` (dev) / `31337` (mainnet-eq) | EVM chain ID |
+| `VALIDATOR_COUNT` | `1` | PoS validators |
+| `SECONDS_PER_SLOT` | `12` | Beacon slot time |
+| `GENESIS_DELAY` | `30` | Seconds from ceremony to CL genesis |
+| `FEE_RECIPIENT` | Hardhat account #0 | Block reward recipient |
+| `RETH_IMAGE` | `ghcr.io/paradigmxyz/reth:v2.3.0` | Execution client image |
+| `LIGHTHOUSE_IMAGE` | `sigp/lighthouse:v8.1.3` | Consensus client image |
 
-### Dev — Tier 1 (EL auto-mining)
+Full reference: [`.env.example`](.env.example) (22 fields with defaults and descriptions).
+
+---
+
+## Deploy
+
+Always use `bash docker-up.sh …` instead of bare `docker compose up` — it renders
+genesis alloc from `vars.env` before starting containers.
+
+### Tier 1 — EL auto-mining
+
+Single Reth `--dev` node. No consensus layer. Best for contract / rollup development.
 
 ```bash
 bash docker-up.sh --profile dev up -d
 ```
 
-No `docker-setup-genesis.sh` required. After changing balances or mnemonic, reset Tier 1:
+No genesis ceremony required. After changing accounts:
 
 ```bash
 bash scripts/reset-dev.sh
 ```
 
-Or manually:
+### Tier 2 — full PoS
+
+Reth + Lighthouse Beacon + Validator over the Engine API.
 
 ```bash
-docker compose --profile dev down -v
-bash docker-up.sh --profile dev up -d
-```
+# One-time genesis ceremony
+bash docker-setup-genesis.sh
 
-### Dev — Tier 2 (full PoS)
-
-```bash
-bash docker-setup-genesis.sh   # includes render-genesis + reth init + lcli
+# Start within GENESIS_DELAY seconds (default 30s)
 bash docker-up.sh --profile full up -d
 ```
 
-Start within **30s** after genesis setup (`GENESIS_DELAY`).
+The ceremony: render genesis alloc → JWT secret → `reth init` → probe genesis hash
+→ lcli testnet → interop genesis → validator keystores. Details: top comment in
+`docker-setup-genesis.sh`.
+
+Regenerate from scratch: `FORCE=1 bash docker-setup-genesis.sh`
 
 ### Mainnet-equivalent
 
+Chain ID `31337`, Prague EVM rules.
+
 ```bash
-# Tier 1 — EL auto-mining
+# Tier 1
 VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
   -f examples/docker-compose-main.yml --profile dev up -d
 
-# Tier 2 — full PoS
+# Tier 2
 bash examples/docker-setup-genesis.sh
 VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
   -f examples/docker-compose-main.yml --profile full up -d
 ```
 
-Reset genesis: `FORCE=1 bash examples/docker-setup-genesis.sh`
+See [`docs/MAINNET_EQUIVALENT.md`](docs/MAINNET_EQUIVALENT.md).
 
 ### Stop
 
 ```bash
 docker compose --profile dev --profile full down
 docker compose -f examples/docker-compose-main.yml --profile dev --profile full down
+
+# Wipe runtime data
+bash scripts/clean-data.sh --all
 ```
 
-> Use `bash docker-up.sh …` instead of bare `docker compose up` so genesis `alloc` stays
-> in sync with `vars.env`. To render only: `bash scripts/render-genesis.sh`.
+---
 
 ## Verify
 
-After `up -d`, from repo root:
-
 ```bash
-# Quick: RPC + block height
-bash scripts/check.sh
+bash scripts/check.sh                        # quick: RPC + block height
 
-# Tier 1 — full EL checks (+ optional tx test)
-bash scripts/healthcheck.sh --el-only
-bash scripts/healthcheck.sh --el-only --tx
+bash scripts/healthcheck.sh --el-only        # Tier 1: EL checks
+bash scripts/healthcheck.sh --el-only --tx   # Tier 1: EL + tx smoke test
+bash scripts/healthcheck.sh                  # Tier 2: EL + CL + validators
 
-# Tier 2 — EL + beacon + validators
-bash scripts/healthcheck.sh
-
-# Send 0.01 ETH (needs: pip install eth-account)
-bash scripts/send-tx-test.sh
+bash scripts/send-tx-test.sh                 # standalone 0.01 ETH transfer
 ```
 
-Mainnet-equivalent (`chainId` 31337):
+Mainnet-equivalent:
 
 ```bash
 VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-only
 ```
 
+---
+
 ## Endpoints
 
-| Service | URL |
-| --- | --- |
-| JSON-RPC | `http://localhost:8545` |
-| Beacon REST (PoS) | `http://localhost:5052` |
+| Service | URL | Notes |
+| --- | --- | --- |
+| JSON-RPC | `http://localhost:8545` | Dev chainId **12345**, mainnet-eq **31337** |
+| Engine API | `http://localhost:8551` | CL↔EL, JWT-authenticated (Tier 2) |
+| Beacon REST | `http://localhost:5052` | Lighthouse API (Tier 2) |
 
-Dev `chainId` **12345**; mainnet-equivalent **31337**.
+---
 
-## Layout
+## Project Layout
 
 ```
-docker-compose.yml                # dev services (profiles: dev, full)
-docker-up.sh                      # render genesis + docker compose
-docker-setup-genesis.sh           # one-time dev PoS genesis
-vars.env                          # dev paths, chainId, mnemonic, balances
-genesis.json                      # dev EL genesis (alloc rendered from vars.env)
-scripts/
-├── render-genesis.sh             # MNEMONIC → genesis.json alloc
-├── compose-env.sh                # export image tags / FEE_RECIPIENT for compose
-├── reset-dev.sh                  # wipe Tier 1 volume + restart
-├── clean-data.sh                 # remove local runtime data dirs
-├── check.sh                      # quick RPC / block check
-├── healthcheck.sh                # PASS/FAIL deployment checks
-└── send-tx-test.sh               # value-transfer smoke test
-requirements.txt                  # python deps (eth-account)
-.env.example                      # compose env reference (optional)
-examples/
-├── docker-setup-genesis.sh       # one-time mainnet-equivalent PoS genesis
-├── docker-compose-main.yml       # mainnet-equivalent stack
-├── genesis.mainnet-equivalent.json
-├── vars.mainnet-equivalent.env   # mainnet paths / chainId / accounts
-└── README.md
+├── docker-compose.yml              # dev services (profiles: dev, full)
+├── docker-up.sh                    # render genesis + docker compose
+├── docker-setup-genesis.sh         # one-time dev PoS genesis ceremony
+├── vars.env                        # dev: paths, chainId, mnemonic, accounts
+├── genesis.json                    # dev EL genesis (alloc rendered)
+├── requirements.txt                # Python deps (eth-account)
+├── .env.example                    # all variables with defaults + descriptions
+├── scripts/
+│   ├── README.md                   # script catalog
+│   ├── render-genesis.sh           # mnemonic → genesis.json alloc
+│   ├── compose-env.sh              # export vars for Docker Compose interpolation
+│   ├── source-vars.sh              # export vars for host-side scripts
+│   ├── lib.sh                      # shared RPC helpers
+│   ├── check.sh                    # quick RPC + chainId + block check
+│   ├── healthcheck.sh              # PASS/FAIL EL + CL assertions
+│   ├── send-tx-test.sh             # value-transfer smoke test
+│   ├── reset-dev.sh                # wipe Tier 1 volume + restart
+│   └── clean-data.sh               # remove runtime data dirs
+├── examples/
+│   ├── README.md                   # examples overview
+│   ├── docker-setup-genesis.sh     # mainnet-eq PoS genesis ceremony
+│   ├── docker-compose-main.yml     # mainnet-equivalent stack
+│   ├── genesis.mainnet-equivalent.json
+│   └── vars.mainnet-equivalent.env # mainnet-eq config
+└── docs/
+    ├── DOCKER.md                   # deployment guide
+    ├── GENESIS.md                  # genesis field reference
+    ├── SCRIPTS.md                  # shell scripts reference
+    ├── MAINNET_EQUIVALENT.md       # mainnet-equivalent stack
+    └── USAGE.md                    # operations + troubleshooting
 ```
+
+---
 
 ## Docs
 
-- [`docs/SCRIPTS.md`](docs/SCRIPTS.md) — shell scripts reference (purpose & usage)
 - [`docs/DOCKER.md`](docs/DOCKER.md) — deployment guide
-- [`docs/GENESIS.md`](docs/GENESIS.md) — genesis field reference & account config
+- [`docs/GENESIS.md`](docs/GENESIS.md) — genesis field reference
+- [`docs/SCRIPTS.md`](docs/SCRIPTS.md) — shell scripts reference
 - [`docs/MAINNET_EQUIVALENT.md`](docs/MAINNET_EQUIVALENT.md) — mainnet-equivalent stack
-- [`docs/USAGE.md`](docs/USAGE.md) — operations & troubleshooting
+- [`docs/USAGE.md`](docs/USAGE.md) — operations + troubleshooting
+- [`.env.example`](.env.example) — all configuration variables
+- [`scripts/README.md`](scripts/README.md) — script catalog

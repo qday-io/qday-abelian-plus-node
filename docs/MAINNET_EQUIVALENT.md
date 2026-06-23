@@ -39,7 +39,8 @@ VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
 | `examples/docker-compose-main.yml` | Compose stack |
 | `examples/genesis.mainnet-equivalent.json` | EL genesis template (alloc rendered from env) |
 | `examples/vars.mainnet-equivalent.env` | Paths, chainId, mnemonic, balances |
-| `examples/docker-setup-genesis.sh` | One-time PoS genesis ceremony |
+| `examples/docker-setup-genesis.sh` | One-time PoS genesis ceremony (6 steps: render genesis → JWT → reth init → lcli testnet → interop-genesis → insecure-validators) |
 | `docker-up.sh` | Render genesis + compose (set `VARS_ENV` for this profile) |
+| `.env.example` | Full variable reference for all profiles |
 
-See [`docs/GENESIS.md`](../docs/GENESIS.md) for field reference.
+See [`docs/GENESIS.md`](GENESIS.md) for field reference, [`.env.example`](../.env.example) for variable reference, [`scripts/README.md`](../scripts/README.md) for script catalog.

@@ -207,6 +207,8 @@ bash scripts/send-tx-test.sh
 Scripts load vars via `scripts/source-vars.sh` (defaults to `vars.env` at repo root).
 Select mainnet-equivalent profile with `VARS_ENV=examples/vars.mainnet-equivalent.env`.
 
+Full variable reference (all 22 fields with defaults and descriptions): [`.env.example`](../.env.example).
+
 Override any value by exporting it before running a script:
 
 ```bash
@@ -215,22 +217,37 @@ CHAIN_ID=99999 GENESIS_ACCOUNT_BALANCES_ETH="100,100,100,100" bash docker-up.sh 
 
 | Variable | Default (dev) | Description |
 | --- | --- | --- |
+| **Docker images** | | |
+| `RETH_IMAGE` | `ghcr.io/paradigmxyz/reth:v2.3.0` | Reth container image (pinned) |
+| `LIGHTHOUSE_IMAGE` | `sigp/lighthouse:v8.1.3` | Lighthouse container image (pinned) |
+| `LCLI_IMAGE` | `abelian-lcli:latest` | lcli image for CL genesis ceremony |
+| **Network / chain** | | |
+| `CHAIN_ID` | `12345` | EVM chain ID (rendered into genesis) |
+| `VALIDATOR_COUNT` | `1` | Validators in CL genesis (Tier 2) |
+| `SECONDS_PER_SLOT` | `12` | Beacon slot time |
+| `GENESIS_DELAY` | `30` | Seconds between setup and CL genesis |
+| `FEE_RECIPIENT` | account #0 | Block reward / fee recipient (wired into validator compose) |
+| **Ports** | | |
+| `RETH_HTTP_PORT` | `8545` | JSON-RPC HTTP port |
+| `RETH_WS_PORT` | `8546` | WebSocket port |
+| `AUTHRPC_PORT` | `8551` | Engine API port (EL↔CL) |
+| `BN_HTTP_PORT` | `5052` | Beacon REST API port |
+| **File paths** | | |
 | `JWT_FILE` | `jwt.hex` | Shared EL↔CL auth secret (Tier 2) |
 | `GENESIS_FILE` | `genesis.json` | Execution-layer genesis |
 | `TESTNET_DIR` | `testnet/` | Generated consensus config (Tier 2) |
 | `RETH_DATADIR` | `reth-data/` | Reth DB (Tier 2) |
-| `CHAIN_ID` | `12345` | EVM chain ID (rendered into genesis) |
-| `MNEMONIC` | Hardhat test mnemonic | Pre-funded account derivation |
-| `GENESIS_ACCOUNT_COUNT` | `4` | Accounts to fund in `alloc` |
-| `GENESIS_ACCOUNT_BALANCES_ETH` | four × `1000000` | Per-account ETH balances |
-| `VALIDATOR_COUNT` | `1` | Validators in CL genesis (Tier 2) |
-| `SECONDS_PER_SLOT` | `12` | Slot time |
-| `GENESIS_DELAY` | `30` | Seconds between setup and CL genesis |
-| `FEE_RECIPIENT` | account #0 | Block reward / fee recipient (wired into validator compose) |
-| `RETH_HTTP_PORT` | `8545` | JSON-RPC HTTP port |
-| `BN_HTTP_PORT` | `5052` | Beacon REST API port |
-| `RETH_IMAGE` | `ghcr.io/paradigmxyz/reth:v2.3.0` | Reth container image (pinned) |
-| `LIGHTHOUSE_IMAGE` | `sigp/lighthouse:v8.1.3` | Lighthouse container image (pinned) |
+| `BEACON_DATADIR` | `beacon-data/` | Lighthouse BN data |
+| `VC_DATADIR` | `validator-data/` | Lighthouse VC data |
+| **Genesis accounts** | | |
+| `MNEMONIC` | Hardhat test mnemonic | Derives pre-funded accounts at `m/44'/60'/0'/0/N` |
+| `GENESIS_ACCOUNT_COUNT` | `4` | Number of accounts to fund |
+| `GENESIS_ACCOUNT_BALANCE_ETH` | `1000000` | Default ETH balance when per-account list omitted |
+| `GENESIS_ACCOUNT_BALANCES_ETH` | four × `1000000` | Comma-separated per-account ETH balances |
+| **Validator paths** | | |
+| `LCLI_VALIDATORS_BASE` | `$ROOT_DIR` | Base dir containing `node_1/validators` and `node_1/secrets` |
+| `VALIDATORS_DIR` | `node_1/validators` | Validator keystore directory |
+| `SECRETS_DIR` | `node_1/secrets` | Validator secrets directory |
 
 > `CHAIN_ID` is synced into `genesis.json` by `render-genesis.sh`. After changes,
 > re-render and restart (Tier 1: `down -v`; Tier 2: `FORCE=1 docker-setup-genesis.sh`).
