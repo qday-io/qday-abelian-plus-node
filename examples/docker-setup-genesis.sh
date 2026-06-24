@@ -187,41 +187,24 @@ echo "    genesis hash = $GENESIS_HASH"
 ensure_lcli_image
 ensure_beacon_genesis_image
 
+CL_CONFIG_TEMPLATE="${CL_CONFIG_TEMPLATE:-$SCRIPT_DIR/cl-config.mainnet-equivalent.yaml}"
+if [[ ! -f "$CL_CONFIG_TEMPLATE" ]]; then
+  echo "ERROR: CL config template not found: $CL_CONFIG_TEMPLATE" >&2
+  exit 1
+fi
+
 # --- 4. Write testnet config.yaml + deposit metadata ---
 GENESIS_TIME=$(($(date +%s) + GENESIS_DELAY))
 echo "==> Writing testnet config (genesis at +${GENESIS_DELAY}s)"
-cat > "$TESTNET_DIR/config.yaml" <<YAML
-CONFIG_NAME: mainnet
-PRESET_BASE: mainnet
-MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: $VALIDATOR_COUNT
-MIN_GENESIS_TIME: $GENESIS_TIME
-GENESIS_DELAY: $GENESIS_DELAY
-GENESIS_FORK_VERSION: "0x00000001"
-ALTAIR_FORK_VERSION: "0x01000001"
-ALTAIR_FORK_EPOCH: 0
-BELLATRIX_FORK_VERSION: "0x02000001"
-BELLATRIX_FORK_EPOCH: 0
-CAPELLA_FORK_VERSION: "0x03000001"
-CAPELLA_FORK_EPOCH: 0
-DENEB_FORK_VERSION: "0x04000001"
-DENEB_FORK_EPOCH: 0
-ELECTRA_FORK_VERSION: "0x05000001"
-ELECTRA_FORK_EPOCH: 0
-MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256
-SHARD_COMMITTEE_PERIOD: 256
-TERMINAL_TOTAL_DIFFICULTY: 0
-TERMINAL_TOTAL_DIFFICULTY_PASSED: true
-DEPOSIT_CHAIN_ID: $CHAIN_ID
-DEPOSIT_NETWORK_ID: $CHAIN_ID
-DEPOSIT_CONTRACT_ADDRESS: "0x4242424242424242424242424242424242424242"
-ETH1_FOLLOW_DISTANCE: 1
-SECONDS_PER_SLOT: $SECONDS_PER_SLOT
-SLOT_DURATION_MS: 12000
-SECONDS_PER_ETH1_BLOCK: $SECONDS_PER_SLOT
-BLOB_SCHEDULE:
-  - EPOCH: 0
-    MAX_BLOBS_PER_BLOCK: 9
-YAML
+sed \
+  -e "s/__MIN_GENESIS_ACTIVE_VALIDATOR_COUNT__/${VALIDATOR_COUNT}/g" \
+  -e "s/__MIN_GENESIS_TIME__/${GENESIS_TIME}/g" \
+  -e "s/__GENESIS_DELAY__/${GENESIS_DELAY}/g" \
+  -e "s/__DEPOSIT_CHAIN_ID__/${CHAIN_ID}/g" \
+  -e "s/__DEPOSIT_NETWORK_ID__/${CHAIN_ID}/g" \
+  -e "s/__SECONDS_PER_SLOT__/${SECONDS_PER_SLOT}/g" \
+  -e "s/__SECONDS_PER_ETH1_BLOCK__/${SECONDS_PER_SLOT}/g" \
+  "$CL_CONFIG_TEMPLATE" > "$TESTNET_DIR/config.yaml"
 echo "0" > "$TESTNET_DIR/deposit_contract_block.txt"
 echo "0" > "$TESTNET_DIR/deposit_contract_deploy_block.txt"
 echo "$GENESIS_HASH" > "$TESTNET_DIR/deposit_contract_block_hash.txt"
@@ -268,6 +251,11 @@ docker run --rm --user "$(id -u):$(id -g)" \
   --base-dir /base \
   --mnemonic-phrase "$MNEMONIC" \
   --node-count 1
+
+# Stale beacon DB from a prior run can prevent loading the new testnet dir.
+if [[ -n "${BEACON_DATADIR:-}" ]]; then
+  docker_rm_rf "$BEACON_DATADIR"
+fi
 
 echo
 echo "==> Mainnet-equivalent genesis setup complete."
