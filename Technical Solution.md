@@ -102,11 +102,8 @@ The PoS genesis ceremony runs entirely in Docker containers. Steps:
    ↓                          (RPC fallback if hash extraction fails)
 3. Probe genesis hash       temp Reth node → eth_getBlockByNumber(0x0)
    ↓
-4. lcli new-testnet         Lighthouse CL testnet config (fork epochs, TTD=0)
-   ↓                          Links CL genesis to EL genesis block hash
-5. lcli interop-genesis     Beacon chain interop genesis state
-   ↓
-6. lcli insecure-validators Validator keystores → node_1/validators + secrets/
+4. lcli generate-bootnode-enr  Pre-genesis boot node ENR
+5. lcli mnemonic-validators    Validator keystores → node_1/validators + secrets/
 ```
 
 The EL genesis block hash is embedded into the CL genesis. If EL genesis changes

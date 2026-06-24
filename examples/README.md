@@ -59,9 +59,9 @@ bash examples/docker-setup-genesis.sh
 6 sub-steps in one command:
 - Generate JWT secret (`jwt.mainnet-eq.hex`)
 - `reth init` the datadir, extract genesis block hash
-- `lcli new-testnet` — create Lighthouse testnet config
-- `lcli interop-genesis` — beacon chain interop genesis state
-- `lcli insecure-validators` — generate validator keystores
+- Write `config.yaml` with spec overrides (fork epochs, TTD=0, EL genesis link)
+- `lcli generate-bootnode-enr` — pre-genesis boot node ENR
+- `lcli mnemonic-validators` — generate validator keystores
 
 **3. Start the full stack (every start)**
 

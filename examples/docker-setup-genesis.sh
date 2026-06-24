@@ -7,9 +7,9 @@
 #   2. reth init — initialise reth datadir with custom genesis, extract genesis block hash
 #   3. (RPC fallback) Start a temporary reth node and query eth_getBlockByNumber(0x0)
 #      to obtain the genesis block hash if step 2 failed to produce one
-#   4. lcli new-testnet — create Lighthouse testnet config (fork epochs, TTD=0, validators)
-#   5. lcli interop-genesis — generate beacon chain interop genesis state
-#   6. lcli insecure-validators — generate insecure validator keystores under $LCLI_VALIDATORS_BASE
+#   4. Write testnet config.yaml (spec overrides, fork epochs, TTD=0, EL genesis hash)
+#   5. lcli generate-bootnode-enr — create pre-genesis boot node ENR
+#   6. lcli mnemonic-validators — generate validator keystores from mnemonic
 #
 # Usage:
 #   bash examples/docker-setup-genesis.sh
@@ -147,50 +147,53 @@ if [[ -z "$GENESIS_HASH" ]]; then
 fi
 echo "    genesis hash = $GENESIS_HASH"
 
-# --- 4. lcli testnet + interop genesis + validator keys ---
+# --- 4. Write testnet config.yaml ---
 ensure_lcli_image
 GENESIS_TIME=$(($(date +%s) + GENESIS_DELAY))
-echo "==> lcli new-testnet (genesis at +${GENESIS_DELAY}s)"
+echo "==> Writing testnet config (genesis at +${GENESIS_DELAY}s)"
+cat > "$TESTNET_DIR/config.yaml" <<YAML
+CONFIG_NAME: mainnet
+PRESET_BASE: mainnet
+MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: $VALIDATOR_COUNT
+MIN_GENESIS_TIME: $GENESIS_TIME
+GENESIS_DELAY: $GENESIS_DELAY
+ALTAIR_FORK_EPOCH: 0
+BELLATRIX_FORK_EPOCH: 0
+CAPELLA_FORK_EPOCH: 0
+DENEB_FORK_EPOCH: 0
+TERMINAL_TOTAL_DIFFICULTY: 0
+TERMINAL_TOTAL_DIFFICULTY_PASSED: true
+DEPOSIT_CHAIN_ID: $CHAIN_ID
+DEPOSIT_NETWORK_ID: $CHAIN_ID
+DEPOSIT_CONTRACT_ADDRESS: "0x4242424242424242424242424242424242424242"
+ETH1_FOLLOW_DISTANCE: 1
+SECONDS_PER_SLOT: $SECONDS_PER_SLOT
+SECONDS_PER_ETH1_BLOCK: $SECONDS_PER_SLOT
+YAML
+echo "0" > "$TESTNET_DIR/deposit_contract_block.txt"
+echo "0" > "$TESTNET_DIR/deposit_contract_deploy_block.txt"
+echo "0x0000000000000000000000000000000000000000000000000000000000000000" > "$TESTNET_DIR/deposit_contract_block_hash.txt"
+
+# --- 5. Generate boot node ENR ---
+echo "==> lcli generate-bootnode-enr"
 docker run --rm \
   -v "$TESTNET_DIR:/testnet" \
   "$LCLI_IMAGE" \
-  new-testnet \
-  --spec mainnet \
+  generate-bootnode-enr \
   --testnet-dir /testnet \
-  --min-genesis-active-validator-count "$VALIDATOR_COUNT" \
-  --validator-count "$VALIDATOR_COUNT" \
-  --min-genesis-time "$GENESIS_TIME" \
-  --genesis-delay "$GENESIS_DELAY" \
-  --altair-fork-epoch 0 \
-  --bellatrix-fork-epoch 0 \
-  --capella-fork-epoch 0 \
-  --deneb-fork-epoch 0 \
-  --ttd 0 \
-  --eth1-block-hash "$GENESIS_HASH" \
-  --eth1-id "$CHAIN_ID" \
-  --eth1-follow-distance 1 \
-  --seconds-per-slot "$SECONDS_PER_SLOT" \
-  --seconds-per-eth1-block "$SECONDS_PER_SLOT" \
-  --force
+  --ip 127.0.0.1 \
+  --port 9000 \
+  --output-dir /testnet 2>/dev/null || true
 
-echo "==> lcli interop-genesis"
-docker run --rm \
-  -v "$TESTNET_DIR:/testnet" \
-  "$LCLI_IMAGE" \
-  interop-genesis \
-  --spec mainnet \
-  --genesis-time "$GENESIS_TIME" \
-  --testnet-dir /testnet \
-  "$VALIDATOR_COUNT"
-
-echo "==> lcli insecure-validators"
+# --- 6. Generate validator keystores ---
+echo "==> lcli mnemonic-validators"
 docker run --rm \
   -v "$LCLI_BASE:/base" \
   "$LCLI_IMAGE" \
-  insecure-validators \
+  mnemonic-validators \
   --count "$VALIDATOR_COUNT" \
   --base-dir /base \
-  --node-count 1
+  --mnemonic "$MNEMONIC"
 
 echo
 echo "==> Mainnet-equivalent genesis setup complete."

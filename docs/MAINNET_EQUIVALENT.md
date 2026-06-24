@@ -39,7 +39,7 @@ docker compose --env-file examples/.env \
 | `examples/docker-compose-main.yml` | Compose stack |
 | `examples/genesis.mainnet-equivalent.json` | EL genesis template (alloc rendered from env) |
 | `examples/vars.mainnet-equivalent.env` | Paths, chainId, mnemonic, balances |
-| `examples/docker-setup-genesis.sh` | One-time PoS genesis ceremony (6 steps: render genesis → JWT → reth init → lcli testnet → interop-genesis → insecure-validators) |
+| `examples/docker-setup-genesis.sh` | One-time PoS genesis ceremony (6 steps: JWT → reth init → config.yaml → bootnode-enr → mnemonic-validators) |
 | `genesis.mainnet-equivalent.json` | EL genesis with pre-funded accounts (Prague fork, blobSchedule) |
 | `.env.example` | Full variable reference for all profiles |
 
