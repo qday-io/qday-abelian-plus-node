@@ -8,9 +8,7 @@ Related config files:
 
 | File | Role |
 | --- | --- |
-| `vars.env` | Dev stack defaults (chainId `12345`, paths, images, accounts) |
 | `examples/vars.mainnet-equivalent.env` | Mainnet-equivalent profile (chainId `31337`) |
-| `requirements.txt` | Python deps for `render-genesis.sh` and tx tests |
 
 Select a profile for any script that reads env:
 
@@ -65,8 +63,7 @@ docker compose --env-file .env --profile full up -d
 
 **Steps performed:**
 
-0. Render genesis alloc from `vars.env` (via `render-genesis.sh`)
-1. Generate `jwt.hex` (Engine API JWT secret, if missing)
+**Steps performed:**
 2. `reth init` in a container — initialise datadir, extract execution genesis block hash
 3. RPC fallback — start temp Reth node and query `eth_getBlockByNumber(0x0)` if step 2 failed to produce the hash
 4. Build/use `abelian-lcli` image and run `lcli new-testnet` — CL testnet configuration
@@ -90,34 +87,6 @@ FORCE=1 bash examples/docker-setup-genesis.sh
 docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile full up -d
 ```
-
----
-
-## Genesis
-
-### `scripts/render-genesis.sh`
-
-**Role:** Derive pre-funded accounts from `MNEMONIC` and write them into the execution genesis file (`alloc`). Also syncs `config.chainId` from `CHAIN_ID`.
-
-- Path: `m/44'/60'/0'/0/N` (Hardhat / Anvil HD path)
-- Preserves non-mnemonic entries already in the genesis template (e.g. pre-deployed contracts)
-
-**Requires:** `python3` + `eth-account` (`pip install -r requirements.txt`)
-
-**Usage:**
-
-```bash
-# Dev (writes genesis.json)
-bash scripts/render-genesis.sh
-
-# Mainnet-equivalent
-bash scripts/render-genesis.sh --env examples/vars.mainnet-equivalent.env
-
-# Override balances for one run
-GENESIS_ACCOUNT_BALANCES_ETH="500000,250000,100,0" bash scripts/render-genesis.sh
-```
-
-Usually called automatically by `docker-setup-genesis.sh`. Run manually when you only want to refresh `genesis.json` without starting containers.
 
 ---
 
@@ -154,40 +123,41 @@ Exits non-zero if any check fails.
 ### First time — Tier 1 (fastest)
 
 ```bash
-pip install -r requirements.txt
-cp .env.example .env
-bash scripts/render-genesis.sh
-docker compose --env-file .env --profile dev up -d
-bash scripts/healthcheck.sh --el-only --tx
+cp examples/env.example examples/.env
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile dev up -d
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env --el-only --tx
 ```
 
 ### First time — Tier 2 (PoS)
 
 ```bash
-pip install -r requirements.txt
-cp .env.example .env
-bash docker-setup-genesis.sh
-docker compose --env-file .env --profile full up -d    # within ~30s
-bash scripts/healthcheck.sh
+cp examples/env.example examples/.env
+bash examples/docker-setup-genesis.sh
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile full up -d    # within ~30s
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env
 ```
 
 ### Change pre-funded accounts (Tier 1)
 
+Edit `examples/genesis.mainnet-equivalent.json` directly, then:
+
 ```bash
-# Edit vars.env (MNEMONIC / GENESIS_ACCOUNT_BALANCES_ETH)
-docker compose --env-file .env --profile dev down -v
-bash scripts/render-genesis.sh
-docker compose --env-file .env --profile dev up -d
-bash scripts/healthcheck.sh --el-only
+docker compose -f examples/docker-compose-main.yml --profile dev down -v
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile dev up -d
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env --el-only
 ```
 
 ### Change pre-funded accounts (Tier 2)
 
 ```bash
-# Edit vars.env
-FORCE=1 bash docker-setup-genesis.sh
-docker compose --env-file .env --profile full up -d
-bash scripts/healthcheck.sh
+# Edit examples/genesis.mainnet-equivalent.json
+FORCE=1 bash examples/docker-setup-genesis.sh
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile full up -d
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env
 ```
 
 ### Full teardown

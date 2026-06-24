@@ -68,16 +68,14 @@ reproducible environments.
 
 ### Genesis rendered, not hand-edited
 
-Pre-funded accounts are configured in `vars.env` (mnemonic + balances) and rendered
-into `genesis.json` by `scripts/render-genesis.sh` before every start. This avoids
-drift between config files and runtime state — account 0's private key is always
-derivable from the mnemonic.
+Pre-funded accounts are hardcoded in `examples/genesis.mainnet-equivalent.json` (`alloc` field).
+The 4 Hardhat accounts each hold ~1M ETH.
 
 ### `--env-file` for compose variables
 
 Docker Compose reads image tags and other interpolation variables from `.env` files
 via `docker compose --env-file .env`. Copy `.env.example` to `.env` to get started.
-Shell scripts (`docker-setup-genesis.sh`, `render-genesis.sh`) source `vars.env`
+Shell scripts (`docker-setup-genesis.sh`) source `examples/vars.mainnet-equivalent.env`
 for configuration that cannot be expressed as Compose interpolation.
 
 ### Profile-based compose
@@ -98,8 +96,6 @@ reproducibility. Bump intentionally when upgrading.
 The PoS genesis ceremony runs entirely in Docker containers. Steps:
 
 ```
-0. Render genesis alloc     scripts/render-genesis.sh
-   ↓
 1. Generate JWT secret      openssl rand -hex 32 → jwt.hex
    ↓
 2. reth init                docker run reth init → genesis block hash
@@ -135,11 +131,8 @@ Simple `KEY=VALUE` file. Ports and block time have defaults in the YAML.
 ```
 vars.env
   │
-  └─ render-genesis.sh ─► MNEMONIC → HD derivation → genesis.json alloc
-                           (preserves non-mnemonic entries)
-
   ── healthcheck.sh ────► cast-based EL + curl-based CL assertions
-                           (loads RPC_URL, BEACON_URL, CHAIN_ID from env)
+                           (accepts --env <path>)
 ```
 
 Override: export any variable before calling a script.  
@@ -161,7 +154,6 @@ Select mainnet-eq profile: `--env examples/vars.mainnet-equivalent.env`.
 | Script | Type | Purpose |
 | --- | --- | --- |
 | `docker-setup-genesis.sh` | One-shot | Tier 2 genesis ceremony |
-| `scripts/render-genesis.sh` | Genesis | MNEMONIC → genesis.json alloc |
 | `scripts/healthcheck.sh` | Verify | PASS/FAIL EL + CL assertions |
 
 ---
@@ -174,7 +166,7 @@ Default for local development. Familiar Hardhat/Anvil test mnemonic and account 
 
 | Tier | Command | Genesis |
 | --- | --- | --- |
-| 1 | `docker compose --env-file .env --profile dev up -d` | `render-genesis.sh` |
+| 1 | `docker compose --env-file examples/.env -f examples/docker-compose-main.yml --profile dev up -d` | none |
 | 2 | `bash docker-setup-genesis.sh` + `docker compose --env-file .env --profile full up -d` | Full ceremony |
 
 ### Mainnet-equivalent profile (`examples/vars.mainnet-equivalent.env`, chainId 31337)
@@ -229,8 +221,6 @@ Dev chainId **12345**, mainnet-equivalent **31337**.
 ├── docker-setup-genesis.sh         # Tier 2 genesis ceremony
 ├── vars.env                        # dev config
 ├── genesis.json                    # dev EL genesis (alloc rendered)
-├── requirements.txt                # Python deps
-├── .env.example                    # all 22 variables
 ├── scripts/                        # helper scripts
 ├── examples/                       # mainnet-equivalent profile
 │   ├── docker-setup-genesis.sh

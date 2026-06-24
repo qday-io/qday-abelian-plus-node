@@ -1,21 +1,6 @@
 # Scripts
 
-Shell scripts for managing the Ethereum L1 devnet (Reth + optional Lighthouse PoS). All scripts use `set -euo pipefail`.
-
-## Configuration & Setup
-
-### `render-genesis.sh`
-
-Regenerates the `alloc` section of `genesis.json` from the mnemonic and balance settings in `vars.env`. Preserves any non-mnemonic alloc entries already in the file. Requires `eth-account` Python package.
-
-**Usage:**
-
-```bash
-bash scripts/render-genesis.sh                                       # defaults
-bash scripts/render-genesis.sh --env examples/vars.mainnet-equivalent.env
-```
-
----
+Shell scripts for managing the Ethereum L1 devnet (Reth + optional Lighthouse PoS).
 
 ## Verification & Testing
 
@@ -30,6 +15,19 @@ Exits with non-zero if any assertion fails.
 ```bash
 bash scripts/healthcheck.sh                                                    # full stack (EL + CL)
 bash scripts/healthcheck.sh --el-only                                          # execution layer only (Tier 1)
-bash scripts/healthcheck.sh --tx                                               # also run a value-transfer test via cast send
+bash scripts/healthcheck.sh --tx                                               # value-transfer test via cast send
 bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env --el-only --tx
+```
+
+---
+
+### `verify.sh`
+
+Interactive menu for chain verification and interaction. Supports chain info, account queries, contract calls, transactions, and network health checks.
+
+**Usage:**
+
+```bash
+bash scripts/verify.sh --rpc http://localhost:1545
+bash scripts/verify.sh --rpc http://localhost:1545 --verbose
 ```

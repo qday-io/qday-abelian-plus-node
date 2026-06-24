@@ -40,7 +40,7 @@ docker compose --env-file examples/.env \
 | `examples/genesis.mainnet-equivalent.json` | EL genesis template (alloc rendered from env) |
 | `examples/vars.mainnet-equivalent.env` | Paths, chainId, mnemonic, balances |
 | `examples/docker-setup-genesis.sh` | One-time PoS genesis ceremony (6 steps: render genesis → JWT → reth init → lcli testnet → interop-genesis → insecure-validators) |
-| `render-genesis.sh` | Render genesis alloc (run manually or set `VARS_ENV`) |
+| `genesis.mainnet-equivalent.json` | EL genesis with pre-funded accounts (Prague fork, blobSchedule) |
 | `.env.example` | Full variable reference for all profiles |
 
 See [`docs/GENESIS.md`](GENESIS.md) for field reference, [`.env.example`](../.env.example) for variable reference, [`scripts/README.md`](../scripts/README.md) for script catalog.

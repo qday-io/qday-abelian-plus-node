@@ -23,9 +23,6 @@ Docker-only guide for deploying, operating, verifying, and configuring the L1 de
 | Tool | Why |
 | --- | --- |
 | Docker Engine + Compose v2 | runs Reth, Lighthouse, lcli in containers |
-| `curl` | RPC checks from host |
-| `python3` | JSON parsing in health scripts |
-| `eth-account` | `pip install -r requirements.txt` — genesis rendering & tx smoke tests |
 | `cast` (Foundry) | `curl -L https://foundry.paradigm.xyz \| bash && foundryup` — healthcheck EL assertions |
 
 
@@ -40,10 +37,8 @@ See also [`docs/DOCKER.md`](DOCKER.md).
 Copy env file before first use:
 
 ```bash
-cp .env.example .env
+cp examples/env.example examples/.env
 ```
-
-Copy `.env.example` to `.env` before first use. Compose reads image tags and ports from `.env` via `--env-file`.
 
 ### Tier 1 — EL auto-mining
 
@@ -51,8 +46,9 @@ Single auto-mining execution node (`reth --dev`). No consensus layer. Best for c
 rollup / bridge testing where you need a working EVM + RPC.
 
 ```bash
-docker compose --env-file .env --profile dev up -d
-bash scripts/healthcheck.sh --el-only --tx
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile dev up -d
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env --el-only --tx
 ```
 
 No `docker-setup-genesis.sh` required.
@@ -62,11 +58,12 @@ No `docker-setup-genesis.sh` required.
 Real consensus driving the EL over the Engine API.
 
 ```bash
-# 1. One-time ceremony: render genesis, reth init, jwt.hex, testnet/, validator keys
-bash docker-setup-genesis.sh
+# 1. One-time ceremony: jwt.hex, reth init, testnet/, validator keys
+bash examples/docker-setup-genesis.sh
 
 # 2. Start Reth + Beacon + Validator
-docker compose --env-file .env --profile full up -d
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile full up -d
 ```
 
 > ⏱️ Consensus genesis is scheduled at `now + GENESIS_DELAY` (default 30 s). Run
@@ -75,7 +72,7 @@ docker compose --env-file .env --profile full up -d
 > If you're too slow: `FORCE=1 bash docker-setup-genesis.sh`, then restart.
 
 ```bash
-bash scripts/healthcheck.sh
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env
 ```
 
 ### Mainnet-equivalent
@@ -97,33 +94,7 @@ Details: [`docs/MAINNET_EQUIVALENT.md`](MAINNET_EQUIVALENT.md).
 
 ## 3. Pre-funded accounts
 
-Configure in `vars.env` (dev) or `examples/vars.mainnet-equivalent.env`:
-
-```bash
-MNEMONIC="test test test test test test test test test test test junk"
-GENESIS_ACCOUNT_COUNT=4
-GENESIS_ACCOUNT_BALANCES_ETH="1000000,1000000,1000000,1000000"
-```
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `MNEMONIC` | Hardhat / Anvil test phrase | Derives addresses at `m/44'/60'/0'/0/N` |
-| `GENESIS_ACCOUNT_COUNT` | `4` | Number of accounts to fund |
-| `GENESIS_ACCOUNT_BALANCE_ETH` | `1000000` | Default ETH balance when list omitted |
-| `GENESIS_ACCOUNT_BALANCES_ETH` | four × `1000000` | Per-account ETH balances (comma-separated) |
-
-Rendering:
-
-```bash
-bash scripts/render-genesis.sh          # dev (uses vars.env)
-bash scripts/render-genesis.sh --env examples/vars.mainnet-equivalent.env
-```
-
-**Tier 1:** render genesis manually before `compose up`. If
-balances look stale, wipe the dev volume: `docker compose --profile dev down -v`.
-
-**Tier 2:** rendered at the start of `docker-setup-genesis.sh`. After changes, run
-`FORCE=1 bash docker-setup-genesis.sh`.
+Pre-funded accounts are hardcoded in `examples/genesis.mainnet-equivalent.json` (`alloc` field).
 
 Default account #0 (also `FEE_RECIPIENT` and `PREFUNDED_ACCOUNT` in health checks):
 
@@ -211,16 +182,15 @@ bash scripts/healthcheck.sh --tx
 
 ## 6. Configuration reference
 
-Scripts load vars via environment variables (defaults below).
-Select mainnet-equivalent profile with `--env examples/vars.mainnet-equivalent.env`.
+Scripts accept `--env <path>` to select a config profile.
 
-Full variable reference (all 22 fields with defaults and descriptions): [`.env.example`](../.env.example).
+Full variable reference for mainnet-equivalent: [`examples/vars.mainnet-equivalent.env`](../examples/vars.mainnet-equivalent.env).
 
 Override any value by exporting it before running a script:
 
 ```bash
-CHAIN_ID=99999 GENESIS_ACCOUNT_BALANCES_ETH="100,100,100,100" bash scripts/render-genesis.sh
-docker compose --env-file .env --profile dev up -d
+CHAIN_ID=99999 docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile dev up -d
 ```
 
 | Variable | Default (dev) | Description |
@@ -257,7 +227,7 @@ docker compose --env-file .env --profile dev up -d
 | `VALIDATORS_DIR` | `node_1/validators` | Validator keystore directory |
 | `SECRETS_DIR` | `node_1/secrets` | Validator secrets directory |
 
-> `CHAIN_ID` is synced into `genesis.json` by `render-genesis.sh`. After changes,
+> `CHAIN_ID` is set in `examples/vars.mainnet-equivalent.env`. After changes,
 > re-render and restart (Tier 1: `down -v`; Tier 2: `FORCE=1 docker-setup-genesis.sh`).
 
 ---
@@ -266,26 +236,14 @@ docker compose --env-file .env --profile dev up -d
 
 > **Field-by-field reference:** [`docs/GENESIS.md`](GENESIS.md)
 
-**Pre-funded accounts** — edit `vars.env`, not `genesis.json`:
-
-```bash
-GENESIS_ACCOUNT_BALANCES_ETH="500000,250000,100000,50000"
-bash scripts/render-genesis.sh
-```
-
-**Pre-deployed contracts** — add `code` (+ optional `storage`) to the genesis JSON
-template; the renderer keeps entries whose addresses are not derived from `MNEMONIC`.
-
-**Block gas limit** — edit `gasLimit` in the genesis template (default `0x1c9c380` = 30M).
-
-**Fork activation** — timestamps like `cancunTime` are `0` (active from genesis) on dev;
-mainnet-equivalent adds Prague — see `examples/genesis.mainnet-equivalent.json`.
+Edit `examples/genesis.mainnet-equivalent.json` directly for pre-funded accounts, gas limit, fork timestamps, etc.
 
 After changes that affect the genesis block hash (Tier 2):
 
 ```bash
-FORCE=1 bash docker-setup-genesis.sh
-docker compose --env-file .env --profile full up -d
+FORCE=1 bash examples/docker-setup-genesis.sh
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile full up -d
 ```
 
 ---
@@ -294,13 +252,12 @@ docker compose --env-file .env --profile full up -d
 
 | Action | Command |
 | --- | --- |
-| Start Tier 1 | `docker compose --env-file .env --profile dev up -d` |
-| Start Tier 2 | `docker compose --env-file .env --profile full up -d` (after setup) |
-| Stop | `docker compose --profile dev --profile full down` |
-| Verify health | `bash scripts/healthcheck.sh` |
-| Render genesis only | `bash scripts/render-genesis.sh` |
-| Reset Tier 1 state | `docker compose --env-file .env --profile dev down -v && docker compose --env-file .env --profile dev up -d` |
-| Reset Tier 2 | `FORCE=1 bash docker-setup-genesis.sh` |
+| Start Tier 1 | `docker compose --env-file examples/.env -f examples/docker-compose-main.yml --profile dev up -d` |
+| Start Tier 2 | `docker compose --env-file examples/.env -f examples/docker-compose-main.yml --profile full up -d` (after setup) |
+| Stop | `docker compose -f examples/docker-compose-main.yml --profile dev --profile full down` |
+| Verify health | `bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env` |
+| Reset Tier 1 state | `docker compose -f examples/docker-compose-main.yml --profile dev down -v && docker compose --env-file examples/.env -f examples/docker-compose-main.yml --profile dev up -d` |
+| Reset Tier 2 | `FORCE=1 bash examples/docker-setup-genesis.sh` |
 
 ---
 
@@ -308,13 +265,12 @@ docker compose --env-file .env --profile full up -d
 
 | Symptom | Likely cause / fix |
 | --- | --- |
-| `eth-account` import error | `pip install -r requirements.txt` |
-| Pre-funded balance wrong | Tier 1: `down -v`, `render-genesis.sh`, then `up -d`; Tier 2: `FORCE=1 docker-setup-genesis.sh` |
+| Pre-funded balance wrong | Tier 1: `down -v`, then `up -d`; Tier 2: `FORCE=1 bash examples/docker-setup-genesis.sh` |
 | `healthcheck.sh`: RPC unreachable | Container not started — `docker compose ps`, check logs |
-| Block number not advancing (Tier 2) | Beacon/validator not running, or missed genesis window — `FORCE=1 docker-setup-genesis.sh`, restart within 30s |
-| Beacon rejects genesis hash | Genesis changed without regenerating CL — `FORCE=1 docker-setup-genesis.sh` |
-| Missing `RETH_IMAGE` / `LIGHTHOUSE_IMAGE` | `docker compose` needs `--env-file .env` — copy from `.env.example` |
-| Port already in use | `docker compose down`, or change ports in `.env` and `vars.env` |
+| Block number not advancing (Tier 2) | Beacon/validator not running, or missed genesis window — `FORCE=1 bash examples/docker-setup-genesis.sh`, restart within 30s |
+| Beacon rejects genesis hash | Genesis changed without regenerating CL — `FORCE=1 bash examples/docker-setup-genesis.sh` |
+| Missing `RETH_IMAGE` / `LIGHTHOUSE_IMAGE` | `docker compose` needs `--env-file examples/.env` — copy from `examples/env.example` |
+| Port already in use | `docker compose down`, or change ports in examples/.env and vars.mainnet-equivalent.env |
 | `lcli` flag error | Pin `LIGHTHOUSE_IMAGE` to a compatible version |
 
 See also [`docs/DOCKER.md`](DOCKER.md) troubleshooting table.

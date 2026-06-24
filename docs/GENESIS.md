@@ -9,7 +9,8 @@ account balances — before any transactions are executed.
 
 > **Related config:** `vars.env` sets `CHAIN_ID=12345`, which must stay in sync with
 > `config.chainId` below. Pre-funded accounts are configured via `MNEMONIC` and
-> `GENESIS_ACCOUNT_*` in `vars.env` and rendered by `scripts/render-genesis.sh`.
+> Pre-funded accounts are hardcoded in `examples/genesis.mainnet-equivalent.json` (`alloc` field).
+> Edit the JSON directly to add or change accounts.
 
 ---
 
@@ -24,10 +25,13 @@ GENESIS_ACCOUNT_BALANCE_ETH=1000000
 GENESIS_ACCOUNT_BALANCES_ETH="1000000,1000000,1000000,1000000"
 ```
 
-Then render (requires `pip install eth-account`):
+Then restart (Tier 1) or regenerate (Tier 2):
 
 ```bash
-bash scripts/render-genesis.sh
+# Tier 1
+docker compose -f examples/docker-compose-main.yml --profile dev down -v
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile dev up -d
 ```
 
 Or let `docker-setup-genesis.sh` call it automatically (Tier 2), or run manually for Tier 1.
@@ -50,9 +54,9 @@ After changing genesis fields that affect the block hash:
 
 ```bash
 # Tier 1 — wipe dev volume and restart:
-docker compose --profile dev down -v
-bash scripts/render-genesis.sh
-docker compose --env-file .env --profile dev up -d
+docker compose -f examples/docker-compose-main.yml --profile dev down -v
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile dev up -d
 
 # Tier 2 — re-bind consensus layer to new EL genesis hash:
 FORCE=1 bash docker-setup-genesis.sh
@@ -188,8 +192,7 @@ not derived from `MNEMONIC`):
 
 | Script / path | Usage |
 | --- | --- |
-| `scripts/render-genesis.sh` | Writes `alloc` + `config.chainId` from `vars.env` |
-| `docker-setup-genesis.sh` | Calls `render-genesis.sh`, then `reth init` + `lcli` |
+| `docker-setup-genesis.sh` | Runs `reth init` + `lcli` for full PoS genesis |
 | `docker-compose.yml` | Mounts `./genesis.json` into the Reth container |
 | `vars.env` | `GENESIS_FILE`, `CHAIN_ID`, `MNEMONIC`, account balances |
 

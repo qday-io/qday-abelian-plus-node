@@ -3,7 +3,6 @@
 # Writes jwt, testnet/, validator keys, and initialises reth datadir on the host.
 #
 # Steps:
-#   0. Render execution genesis alloc from vars.env + MNEMONIC → genesis.json
 #   1. Generate JWT hex secret (Engine API auth between EL and CL)
 #   2. reth init — initialise reth datadir with custom genesis, extract genesis block hash
 #   3. (RPC fallback) Start a temporary reth node and query eth_getBlockByNumber(0x0)
@@ -90,9 +89,6 @@ echo "    Lighthouse image: $LIGHTHOUSE_IMAGE"
 echo "    LCLI image:       $LCLI_IMAGE"
 echo "    Genesis:          $GENESIS_FILE"
 echo "    chainId:          $CHAIN_ID"
-
-# --- 0. Render execution genesis alloc from vars.env ---
-bash "$ROOT_DIR/scripts/render-genesis.sh"
 
 # --- 1. JWT ---
 if [[ ! -f "$JWT_FILE" ]]; then
