@@ -25,10 +25,12 @@ testnet-mainnet-eq/
 # Generated consensus-layer testnet artifacts
 testnet/*
 !testnet/.gitkeep
+testnet
 
 # Generated validator keystores / secrets
 node_1/*
 !node_1/.gitkeep
+node_1
 validators/
 secrets/
 l1-mainnet-eq/
