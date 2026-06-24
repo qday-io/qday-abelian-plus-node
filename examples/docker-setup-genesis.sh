@@ -12,19 +12,38 @@
 #   5. lcli interop-genesis — generate beacon chain interop genesis state
 #   6. lcli insecure-validators — generate insecure validator keystores under $LCLI_VALIDATORS_BASE
 #
-# Usage (from repo root):
+# Usage:
 #   bash examples/docker-setup-genesis.sh
+#   bash examples/docker-setup-genesis.sh --env examples/vars.custom.env
 #   FORCE=1 bash examples/docker-setup-genesis.sh
-#
-# Usage (from examples/):
-#   bash docker-setup-genesis.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-# shellcheck disable=SC1091
-source "$SCRIPT_DIR/vars.mainnet-equivalent.env"
-export VARS_ENV="$SCRIPT_DIR/vars.mainnet-equivalent.env"
+
+# Parse --env flag, then source default if not provided
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --env) VARS_ENV="$2"; shift 2 ;;
+    --env=*) VARS_ENV="${1#*=}"; shift ;;
+    -h|--help)
+      echo "Usage: $0 [--env <path>]"
+      echo "  FORCE=1 $0 [--env <path>]  (wipe and regenerate)"
+      exit 0
+      ;;
+    *) echo "Unknown option: $1" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z "${VARS_ENV:-}" ]]; then
+  VARS_ENV="$SCRIPT_DIR/vars.mainnet-equivalent.env"
+fi
+if [[ "$VARS_ENV" != /* ]]; then
+  VARS_ENV="$ROOT_DIR/$VARS_ENV"
+fi
+# shellcheck disable=SC1090
+source "$VARS_ENV"
+export VARS_ENV
 
 ensure_lcli_image() {
   if docker image inspect "$LCLI_IMAGE" >/dev/null 2>&1; then

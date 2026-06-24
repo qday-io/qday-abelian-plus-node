@@ -12,7 +12,7 @@
 | `.env` / `.env.example` | **Yes** — copy `.env.example` to `.env` for compose interpolation |
 | `scripts/README.md` | Optional — script catalog with usage examples |
 | `scripts/render-genesis.sh` | Called by `docker-setup-genesis.sh` and run manually for Tier 1 |
-| `scripts/healthcheck.sh` / `check.sh` | Optional — verify from host |
+| `scripts/healthcheck.sh` | Optional — verify from host |
 | `python3` + `eth-account` | **Yes** for genesis rendering (`pip install eth-account`) |
 
 ## Pre-funded accounts
@@ -74,7 +74,7 @@ bash scripts/healthcheck.sh
 ```bash
 docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile dev up -d
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-only
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env --el-only
 ```
 
 **Mainnet-equivalent Tier 2**
@@ -83,7 +83,7 @@ VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-o
 bash examples/docker-setup-genesis.sh
 docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile full up -d
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env
 ```
 
 **Custom account balances (example)**
@@ -99,7 +99,6 @@ docker compose --env-file .env --profile dev up -d
 ```bash
 bash scripts/healthcheck.sh --el-only --tx   # Tier 1
 bash scripts/healthcheck.sh                  # Tier 2 (PoS)
-bash scripts/send-tx-test.sh                 # optional tx smoke test
 ```
 
 **Stop**

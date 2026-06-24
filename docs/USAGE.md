@@ -26,6 +26,7 @@ Docker-only guide for deploying, operating, verifying, and configuring the L1 de
 | `curl` | RPC checks from host |
 | `python3` | JSON parsing in health scripts |
 | `eth-account` | `pip install -r requirements.txt` — genesis rendering & tx smoke tests |
+| `cast` (Foundry) | `curl -L https://foundry.paradigm.xyz \| bash && foundryup` — healthcheck EL assertions |
 
 
 ## Hardware: ~4 CPU / 8 GB RAM is comfortable for a single-node stack.
@@ -115,7 +116,7 @@ Rendering:
 
 ```bash
 bash scripts/render-genesis.sh          # dev (uses vars.env)
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/render-genesis.sh
+bash scripts/render-genesis.sh --env examples/vars.mainnet-equivalent.env
 ```
 
 **Tier 1:** render genesis manually before `compose up`. If
@@ -156,7 +157,7 @@ bash scripts/healthcheck.sh --el-only --tx
 Quick glance:
 
 ```bash
-bash scripts/check.sh
+bash scripts/healthcheck.sh --el-only
 ```
 
 Expected healthy output ends with:
@@ -200,7 +201,7 @@ cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://localho
 **Send a test transaction (built-in script)**
 
 ```bash
-bash scripts/send-tx-test.sh
+bash scripts/healthcheck.sh --tx
 ```
 
 **MetaMask / wallet** — add a custom network: RPC `http://localhost:1545`, Chain ID `12345`
@@ -210,8 +211,8 @@ bash scripts/send-tx-test.sh
 
 ## 6. Configuration reference
 
-Scripts load vars via `scripts/source-vars.sh` (defaults to `vars.env` at repo root).
-Select mainnet-equivalent profile with `VARS_ENV=examples/vars.mainnet-equivalent.env`.
+Scripts load vars via environment variables (defaults below).
+Select mainnet-equivalent profile with `--env examples/vars.mainnet-equivalent.env`.
 
 Full variable reference (all 22 fields with defaults and descriptions): [`.env.example`](../.env.example).
 
@@ -300,7 +301,6 @@ docker compose --env-file .env --profile full up -d
 | Render genesis only | `bash scripts/render-genesis.sh` |
 | Reset Tier 1 state | `docker compose --env-file .env --profile dev down -v && docker compose --env-file .env --profile dev up -d` |
 | Reset Tier 2 | `FORCE=1 bash docker-setup-genesis.sh` |
-| Clean runtime data | `bash scripts/clean-data.sh --full` (stop containers first) |
 
 ---
 

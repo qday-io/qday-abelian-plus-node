@@ -11,13 +11,13 @@ Account configuration lives in `examples/vars.mainnet-equivalent.env` (same `MNE
 # Tier 1 — EL auto-mining
 docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile dev up -d
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-only
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env --el-only
 
 # Tier 2 — full PoS
 bash examples/docker-setup-genesis.sh
 docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile full up -d
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env
 ```
 
 Reset: `FORCE=1 bash examples/docker-setup-genesis.sh`

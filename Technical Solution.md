@@ -135,15 +135,15 @@ Simple `KEY=VALUE` file. Ports and block time have defaults in the YAML.
 ```
 vars.env
   │
-  ├─ source-vars.sh ────► export RPC_URL, BEACON_URL, CHAIN_ID, ...
-  │                        (used by healthcheck, check, send-tx-test)
-  │
   └─ render-genesis.sh ─► MNEMONIC → HD derivation → genesis.json alloc
                            (preserves non-mnemonic entries)
+
+  ── healthcheck.sh ────► cast-based EL + curl-based CL assertions
+                           (loads RPC_URL, BEACON_URL, CHAIN_ID from env)
 ```
 
 Override: export any variable before calling a script.  
-Select mainnet-eq profile: `VARS_ENV=examples/vars.mainnet-equivalent.env`.
+Select mainnet-eq profile: `--env examples/vars.mainnet-equivalent.env`.
 
 ---
 
@@ -163,10 +163,6 @@ Select mainnet-eq profile: `VARS_ENV=examples/vars.mainnet-equivalent.env`.
 | `docker-setup-genesis.sh` | One-shot | Tier 2 genesis ceremony |
 | `scripts/render-genesis.sh` | Genesis | MNEMONIC → genesis.json alloc |
 | `scripts/healthcheck.sh` | Verify | PASS/FAIL EL + CL assertions |
-| `scripts/check.sh` | Verify | Quick RPC + chainId + block check |
-| `scripts/send-tx-test.sh` | Verify | 0.01 ETH value transfer smoke test |
-| `scripts/reset-dev.sh` | Maintenance | Wipe Tier 1 volume + restart |
-| `scripts/clean-data.sh` | Maintenance | Remove runtime data dirs |
 
 ---
 

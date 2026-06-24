@@ -53,6 +53,9 @@ bash scripts/healthcheck.sh
 | --- | --- |
 | Docker Engine & Compose v2 | Run Reth + Lighthouse containers |
 | `python3` ≥ 3.10 | `pip install -r requirements.txt` — genesis rendering, tx signing |
+| `cast` (Foundry) | Healthcheck EL assertions & tx smoke test |
+
+Install Foundry: `curl -L https://foundry.paradigm.xyz | bash && foundryup`
 
 ---
 
@@ -87,7 +90,6 @@ See [`examples/vars.mainnet-equivalent.env`](examples/vars.mainnet-equivalent.en
 bash scripts/healthcheck.sh --el-only        # Tier 1: EL assertions
 bash scripts/healthcheck.sh --el-only --tx   # Tier 1: EL + tx smoke test
 bash scripts/healthcheck.sh                  # Tier 2: EL + CL + validators
-bash scripts/check.sh                        # quick: RPC + block height only
 ```
 
 ---
@@ -97,7 +99,6 @@ bash scripts/check.sh                        # quick: RPC + block height only
 ```bash
 docker compose -f examples/docker-compose-main.yml --profile dev --profile full down
 FORCE=1 bash examples/docker-setup-genesis.sh   # reset Tier 2 state
-bash scripts/clean-data.sh --all                # wipe runtime data
 ```
 
 ---
@@ -114,7 +115,6 @@ bash scripts/clean-data.sh --all                # wipe runtime data
 ├── scripts/
 │   ├── render-genesis.sh           # mnemonic → genesis.json
 │   ├── healthcheck.sh              # EL + CL assertions
-│   ├── send-tx-test.sh             # tx smoke test
 │   └── README.md                   # script catalog
 ├── docs/                           # detailed guides
 ├── docker/                         # Dockerfile.lcli

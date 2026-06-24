@@ -15,7 +15,7 @@ Related config files:
 Select a profile for any script that reads env:
 
 ```bash
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-only
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env --el-only
 ```
 
 ---
@@ -29,10 +29,8 @@ docker compose --env-file .env           docker-setup-genesis.sh   (one-time)
   --profile dev up -d                    docker compose --env-file .env
                                            --profile full up -d
 
-After start ──────────────────────────── check / healthcheck / send-tx-test
-Config change (Tier 1) ───────────────── reset-dev.sh
+After start ──────────────────────────── healthcheck
 Config change (Tier 2) ───────────────── FORCE=1 docker-setup-genesis.sh
-Wipe runtime data ────────────────────── clean-data.sh
 ```
 
 ---
@@ -113,7 +111,7 @@ docker compose --env-file examples/.env \
 bash scripts/render-genesis.sh
 
 # Mainnet-equivalent
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/render-genesis.sh
+bash scripts/render-genesis.sh --env examples/vars.mainnet-equivalent.env
 
 # Override balances for one run
 GENESIS_ACCOUNT_BALANCES_ETH="500000,250000,100,0" bash scripts/render-genesis.sh
@@ -125,33 +123,17 @@ Usually called automatically by `docker-setup-genesis.sh`. Run manually when you
 
 ## Verification (host-side)
 
-These scripts load config via `scripts/source-vars.sh` and RPC helpers via `scripts/lib.sh`.
-
-### `scripts/check.sh`
-
-**Role:** Minimal smoke test — RPC reachable, correct `chainId`, block number advancing.
-
-**Usage:**
-
-```bash
-bash scripts/check.sh
-
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/check.sh
-```
-
-Exits non-zero on failure. No PASS/FAIL summary (use `healthcheck.sh` for that).
-
----
+These scripts load config from environment variables (defaults below).
 
 ### `scripts/healthcheck.sh`
 
-**Role:** Structured PASS/FAIL checks for deployment health.
+**Role:** Structured PASS/FAIL checks for deployment health. EL checks use `cast` (Foundry), CL checks use `curl`.
 
 | Mode | Checks |
 | --- | --- |
 | default | EL + Beacon + validators |
 | `--el-only` | Execution layer only (Tier 1) |
-| `--tx` | Also runs `send-tx-test.sh` |
+| `--tx` | Also runs a value-transfer test via `cast send` |
 
 **Usage:**
 
@@ -160,109 +142,10 @@ bash scripts/healthcheck.sh --el-only
 bash scripts/healthcheck.sh --el-only --tx
 bash scripts/healthcheck.sh              # Tier 2 full stack
 
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-only
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env --el-only
 ```
 
 Exits non-zero if any check fails.
-
----
-
-### `scripts/send-tx-test.sh`
-
-**Role:** Sign and send a **0.01 ETH** value transfer via JSON-RPC; confirm receipt and balance change.
-
-**Requires:** `eth-account`  
-**Defaults:** Hardhat account #0 → account #1
-
-**Usage:**
-
-```bash
-bash scripts/send-tx-test.sh
-
-# Custom transfer
-FROM_PK=0x... TO_ADDR=0x... VALUE_WEI=10000000000000000 bash scripts/send-tx-test.sh
-```
-
-Also invoked by `healthcheck.sh --tx`.
-
----
-
-## Maintenance
-
-### `scripts/reset-dev.sh`
-
-**Role:** Reset **Tier 1** state: stop dev profile, remove Docker volume, re-render genesis, restart.
-
-Use after changing `MNEMONIC`, account balances, or `CHAIN_ID` on an existing Tier 1 node.
-
-**Usage:**
-
-```bash
-bash scripts/reset-dev.sh
-
-# Mainnet-equivalent Tier 1
-VARS_ENV=examples/vars.mainnet-equivalent.env \
-  COMPOSE_FILE=examples/docker-compose-main.yml \
-  bash scripts/reset-dev.sh
-```
-
-Does not touch Tier 2 artifacts (`reth-data/`, `testnet/`, etc.). For Tier 2, use `FORCE=1 bash docker-setup-genesis.sh`.
-
----
-
-### `scripts/clean-data.sh`
-
-**Role:** Remove local runtime data directories. **Stop containers first** (script runs `docker compose down -v` where applicable).
-
-**Usage:**
-
-```bash
-bash scripts/clean-data.sh --dev          # Tier 1 Docker volume only
-bash scripts/clean-data.sh --full         # Dev Tier 2 host dirs + volumes
-bash scripts/clean-data.sh --mainnet-eq   # Mainnet-equivalent artifacts
-bash scripts/clean-data.sh --all          # Everything above
-```
-
-| Flag | Removes |
-| --- | --- |
-| `--dev` | `docker compose --profile dev down -v` |
-| `--full` | `reth-data/`, `testnet/`, `jwt.hex`, `node_1/`, beacon/validator volumes |
-| `--mainnet-eq` | `reth-data-mainnet-eq/`, `testnet-mainnet-eq/`, `jwt.mainnet-eq.hex`, `l1-mainnet-eq/`, … |
-
----
-
-## Internal / library scripts
-
-Not intended to be run directly. Sourced by other scripts.
-
-### `scripts/source-vars.sh`
-
-**Role:** Load `vars.env` (or `VARS_ENV`) and set **host-side verification** variables.
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `RPC_URL` | `http://127.0.0.1:1545` | Reth JSON-RPC |
-| `BEACON_URL` | `http://127.0.0.1:1052` | Lighthouse REST |
-| `CHAIN_ID` | `12345` | Expected chain ID |
-| `PREFUNDED_ACCOUNT` | Hardhat #0 | Balance check target |
-
-**Used by:** `scripts/check.sh`, `scripts/healthcheck.sh`, `scripts/send-tx-test.sh`
-
----
-
-### `scripts/lib.sh`
-
-**Role:** Shared bash functions for verification scripts.
-
-| Function | Purpose |
-| --- | --- |
-| `rpc_call` | JSON-RPC POST via `curl` |
-| `rpc_result` | Parse `"result"` from JSON response |
-| `hex_to_int` | Convert hex string to integer |
-| `pass` / `fail` | Increment PASS/FAIL counters |
-| `summary` | Print summary; exit 1 if any failure |
-
-**Used by:** `scripts/check.sh`, `scripts/healthcheck.sh`, `scripts/send-tx-test.sh`
 
 ---
 
@@ -310,8 +193,7 @@ bash scripts/healthcheck.sh
 ### Full teardown
 
 ```bash
-docker compose --profile dev --profile full down
-bash scripts/clean-data.sh --all
+docker compose -f examples/docker-compose-main.yml --profile dev --profile full down
 ```
 
 ---

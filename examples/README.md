@@ -33,7 +33,7 @@ Launches Reth with `--dev` auto-mining mode, exposing JSON-RPC on `:1545`.
 **3. Verify (optional)**
 
 ```bash
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-only --tx
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env --el-only --tx
 ```
 
 Checks RPC reachability, chain ID, block production, pre-funded balance, and runs a value-transfer smoke test.
@@ -79,7 +79,7 @@ Launches Reth, Lighthouse BN, and Lighthouse VC. Must start within `GENESIS_DELA
 **4. Verify (optional)**
 
 ```bash
-VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh
+bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env
 ```
 
 Checks EL health (RPC, chain ID, sync, blocks, balance) + CL health (beacon reachable, slots advancing, finality, active validators).
@@ -93,7 +93,6 @@ Checks EL health (RPC, chain ID, sync, blocks, balance) + CL health (beacon reac
 | Stop | `docker compose -f examples/docker-compose-main.yml --profile dev --profile full down` |
 | Reset Tier 1 | `docker compose -f examples/docker-compose-main.yml --profile dev down -v` |
 | Reset Tier 2 | `FORCE=1 bash examples/docker-setup-genesis.sh` |
-| Wipe runtime data | `bash scripts/clean-data.sh --all` |
 
 ---
 

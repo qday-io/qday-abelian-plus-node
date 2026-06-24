@@ -1,20 +1,43 @@
 #!/usr/bin/env bash
 # Render genesis.json alloc from MNEMONIC + balance settings in vars.env.
 # Preserves non-mnemonic alloc entries already present in the genesis file.
+#
+# Usage:
+#   bash scripts/render-genesis.sh
+#   bash scripts/render-genesis.sh --env examples/vars.mainnet-equivalent.env
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${ROOT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 
-if [[ -n "${VARS_ENV:-}" ]]; then
+# Parse --env flag
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --env) ENV_FILE="$2"; shift 2 ;;
+    --env=*) ENV_FILE="${1#*=}"; shift ;;
+    -h|--help)
+      echo "Usage: $0 [--env <path>]"
+      exit 0
+      ;;
+    *) echo "Unknown option: $1" >&2; exit 2 ;;
+  esac
+done
+
+# Load env file: --env flag > VARS_ENV > defaults
+if [[ -n "${ENV_FILE:-}" ]]; then
+  if [[ "$ENV_FILE" != /* ]]; then
+    ENV_FILE="$ROOT_DIR/$ENV_FILE"
+  fi
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+elif [[ -n "${VARS_ENV:-}" ]]; then
   if [[ "$VARS_ENV" != /* ]]; then
     VARS_ENV="$ROOT_DIR/$VARS_ENV"
   fi
-  # shellcheck disable=SC1090
-  source "$VARS_ENV"
-elif [[ -f "$ROOT_DIR/vars.env" ]]; then
-  # shellcheck disable=SC1091
-  source "$ROOT_DIR/vars.env"
+  if [[ -f "$VARS_ENV" ]]; then
+    # shellcheck disable=SC1090
+    source "$VARS_ENV"
+  fi
 fi
 
 GENESIS_FILE="${GENESIS_FILE:-$ROOT_DIR/genesis.json}"
