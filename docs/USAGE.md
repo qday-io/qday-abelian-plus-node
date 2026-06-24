@@ -169,14 +169,14 @@ Expected healthy output ends with:
 
 | Endpoint | URL |
 | --- | --- |
-| JSON-RPC (HTTP) | `http://localhost:8545` |
-| Engine API (auth, Tier 2) | `http://localhost:8551` |
-| Beacon REST (Tier 2) | `http://localhost:5052` |
+| JSON-RPC (HTTP) | `http://localhost:1545` |
+| Engine API (auth, Tier 2) | `http://localhost:1551` |
+| Beacon REST (Tier 2) | `http://localhost:1052` |
 
 **Send a raw RPC call**
 
 ```bash
-curl -s http://localhost:8545 -X POST -H 'Content-Type: application/json' \
+curl -s http://localhost:1545 -X POST -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
@@ -185,10 +185,10 @@ curl -s http://localhost:8545 -X POST -H 'Content-Type: application/json' \
 ```bash
 export PK=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 forge create src/MyContract.sol:MyContract \
-  --rpc-url http://localhost:8545 --private-key $PK --broadcast
+  --rpc-url http://localhost:1545 --private-key $PK --broadcast
 
-cast send <ADDR> "set(uint256)" 42 --rpc-url http://localhost:8545 --private-key $PK
-cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://localhost:8545
+cast send <ADDR> "set(uint256)" 42 --rpc-url http://localhost:1545 --private-key $PK
+cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://localhost:1545
 ```
 
 **Send a test transaction (built-in script)**
@@ -197,7 +197,7 @@ cast balance 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://localho
 bash scripts/send-tx-test.sh
 ```
 
-**MetaMask / wallet** — add a custom network: RPC `http://localhost:8545`, Chain ID `12345`
+**MetaMask / wallet** — add a custom network: RPC `http://localhost:1545`, Chain ID `12345`
 (dev) or `31337` (mainnet-equivalent), currency `ETH`.
 
 ---
@@ -228,10 +228,10 @@ CHAIN_ID=99999 GENESIS_ACCOUNT_BALANCES_ETH="100,100,100,100" bash docker-up.sh 
 | `GENESIS_DELAY` | `30` | Seconds between setup and CL genesis |
 | `FEE_RECIPIENT` | account #0 | Block reward / fee recipient (wired into validator compose) |
 | **Ports** | | |
-| `RETH_HTTP_PORT` | `8545` | JSON-RPC HTTP port |
-| `RETH_WS_PORT` | `8546` | WebSocket port |
-| `AUTHRPC_PORT` | `8551` | Engine API port (EL↔CL) |
-| `BN_HTTP_PORT` | `5052` | Beacon REST API port |
+| `RETH_HTTP_PORT` | `1545` | JSON-RPC HTTP port |
+| `RETH_WS_PORT` | `1546` | WebSocket port |
+| `AUTHRPC_PORT` | `1551` | Engine API port (EL↔CL) |
+| `BN_HTTP_PORT` | `1052` | Beacon REST API port |
 | **File paths** | | |
 | `JWT_FILE` | `jwt.hex` | Shared EL↔CL auth secret (Tier 2) |
 | `GENESIS_FILE` | `genesis.json` | Execution-layer genesis |

@@ -24,7 +24,7 @@ export ROOT_DIR
 export RETH_IMAGE="${RETH_IMAGE:-ghcr.io/paradigmxyz/reth:v2.3.0}"
 export LIGHTHOUSE_IMAGE="${LIGHTHOUSE_IMAGE:-sigp/lighthouse:v8.1.3}"
 export FEE_RECIPIENT="${FEE_RECIPIENT:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}"
-export RETH_HTTP_PORT="${RETH_HTTP_PORT:-8545}"
-export BN_HTTP_PORT="${BN_HTTP_PORT:-5052}"
+export RETH_HTTP_PORT="${RETH_HTTP_PORT:-1545}"
+export BN_HTTP_PORT="${BN_HTTP_PORT:-1052}"
 
 set +a

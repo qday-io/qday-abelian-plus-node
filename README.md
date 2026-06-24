@@ -162,9 +162,9 @@ VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-o
 
 | Service | URL | Notes |
 | --- | --- | --- |
-| JSON-RPC | `http://localhost:8545` | Dev chainId **12345**, mainnet-eq **31337** |
-| Engine API | `http://localhost:8551` | CL↔EL, JWT-authenticated (Tier 2) |
-| Beacon REST | `http://localhost:5052` | Lighthouse API (Tier 2) |
+| JSON-RPC | `http://localhost:1545` | Dev chainId **12345**, mainnet-eq **31337** |
+| Engine API | `http://localhost:1551` | CL↔EL, JWT-authenticated (Tier 2) |
+| Beacon REST | `http://localhost:1052` | Lighthouse API (Tier 2) |
 
 ---
 

@@ -287,8 +287,8 @@ Not intended to be run directly. Sourced by other scripts.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `RPC_URL` | `http://127.0.0.1:8545` | Reth JSON-RPC |
-| `BEACON_URL` | `http://127.0.0.1:5052` | Lighthouse REST |
+| `RPC_URL` | `http://127.0.0.1:1545` | Reth JSON-RPC |
+| `BEACON_URL` | `http://127.0.0.1:1052` | Lighthouse REST |
 | `CHAIN_ID` | `12345` | Expected chain ID |
 | `PREFUNDED_ACCOUNT` | Hardhat #0 | Balance check target |
 

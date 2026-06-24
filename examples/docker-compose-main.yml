@@ -70,8 +70,8 @@ services:
       - ./genesis.mainnet-equivalent.json:/genesis.json:ro
       - ../reth-dev-data-mainnet-eq:/root/.local/share/reth
     ports:
-      - "${RETH_HTTP_PORT:-8545}:8545"
-      - "${RETH_WS_PORT:-8546}:8546"
+      - "${RETH_HTTP_PORT:-1545}:8545"
+      - "${RETH_WS_PORT:-1546}:8546"
     healthcheck: *reth-healthcheck
 
   # ---------- Tier 2: full PoS ----------
@@ -84,9 +84,9 @@ services:
       - ../jwt.mainnet-eq.hex:/jwt.hex:ro
       - ../reth-data-mainnet-eq:/root/.local/share/reth
     ports:
-      - "${RETH_HTTP_PORT:-8545}:8545"
-      - "${RETH_WS_PORT:-8546}:8546"
-      - "${AUTHRPC_PORT:-8551}:8551"
+      - "${RETH_HTTP_PORT:-1545}:8545"
+      - "${RETH_WS_PORT:-1546}:8546"
+      - "${AUTHRPC_PORT:-1551}:8551"
     healthcheck: *reth-healthcheck
 
   beacon:
@@ -112,7 +112,7 @@ services:
       - ../jwt.mainnet-eq.hex:/jwt.hex:ro
       - ../beacon-data-mainnet-eq:/root/.lighthouse
     ports:
-      - "${BN_HTTP_PORT:-5052}:5052"
+      - "${BN_HTTP_PORT:-1052}:5052"
     healthcheck: *beacon-healthcheck
 
   validator:

@@ -141,7 +141,7 @@ Compose services include healthchecks; Tier 2 beacon/validator wait for EL/BN re
 | --- | --- |
 | `eth-account` import error | `pip install -r requirements.txt` |
 | Image pull fails | Retry `docker compose pull` when network is stable |
-| Port 8545 in use | `docker compose … down`, stop other stacks |
+| Port 1545 in use | `docker compose … down`, stop other stacks |
 | Pre-funded balance wrong / stale | Tier 1: `down -v` then `docker-up.sh`; Tier 2: `FORCE=1 docker-setup-genesis.sh` |
 | Used `docker compose up` directly | Run `bash scripts/render-genesis.sh` first, or use `docker-up.sh` |
 | Missed CL genesis | `FORCE=1` re-run `docker-setup-genesis.sh`, then `docker-up.sh` within 30s |
