@@ -152,8 +152,8 @@ Select mainnet-eq profile: `VARS_ENV=examples/vars.mainnet-equivalent.env`.
 | Component | Container Image | Role |
 | --- | --- | --- |
 | Reth | `ghcr.io/paradigmxyz/reth:v2.3.0` | Execution layer: EVM, JSON-RPC, Engine API |
-| Lighthouse BN | `sigp/lighthouse:v8.1.3` | Consensus layer: slot production, fork choice |
-| Lighthouse VC | `sigp/lighthouse:v8.1.3` | Validator: attestations, block proposals |
+| Lighthouse BN | `sigp/lighthouse:v8.2.0` | Consensus layer: slot production, fork choice |
+| Lighthouse VC | `sigp/lighthouse:v8.2.0` | Validator: attestations, block proposals |
 | lcli | `abelian-lcli:latest` (built from `docker/Dockerfile.lcli`) | Lighthouse tooling: testnet genesis, validator key generation |
 
 ### Helper scripts
