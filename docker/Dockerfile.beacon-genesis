@@ -1,0 +1,22 @@
+# eth-beacon-genesis — generates CL genesis.ssz from EL genesis.json + config.yaml.
+# Build: docker build -t abelian-beacon-genesis:latest -f docker/Dockerfile.beacon-genesis docker
+#
+# Version pinned to match ethpandaops/ethereum-genesis-generator defaults.
+
+ARG ETH_BEACON_GENESIS_VERSION=v0.0.4
+ARG ETH_BEACON_GENESIS_SHA=6d60dcf20a9faffb5e4a0b819b661e6a4e08a9b4
+
+FROM golang:1.25-bookworm AS builder
+ARG ETH_BEACON_GENESIS_VERSION
+ARG ETH_BEACON_GENESIS_SHA
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+RUN git clone --depth 1 --branch "${ETH_BEACON_GENESIS_VERSION}" \
+      https://github.com/ethpandaops/eth-beacon-genesis.git . \
+    && test "$(git rev-parse HEAD)" = "${ETH_BEACON_GENESIS_SHA}" \
+    && make
+
+FROM debian:bookworm-slim
+COPY --from=builder /src/bin/eth-genesis-state-generator /usr/local/bin/eth-genesis-state-generator
+ENTRYPOINT ["eth-genesis-state-generator"]

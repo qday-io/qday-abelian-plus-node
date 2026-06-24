@@ -58,10 +58,12 @@ bash examples/docker-setup-genesis.sh
 
 6 sub-steps in one command:
 - Generate JWT secret (`jwt.mainnet-eq.hex`)
-- `reth init` the datadir, extract genesis block hash
-- Write `config.yaml` with spec overrides (fork epochs, TTD=0, EL genesis link)
-- `lcli generate-bootnode-enr` — pre-genesis boot node ENR
+- `reth init` the datadir, extract execution genesis block hash (RPC fallback if needed)
+- Write `config.yaml` with spec overrides (fork epochs through Electra, TTD=0, Prague blob schedule)
+- `eth-genesis-state-generator` — build `genesis.ssz` (EL block hash taken from `genesis.mainnet-equivalent.json`)
 - `lcli mnemonic-validators` — generate validator keystores
+
+First run builds `abelian-lcli` and `abelian-beacon-genesis` images locally (needs GitHub access).
 
 **3. Start the full stack (every start)**
 
@@ -106,6 +108,10 @@ docker compose --env-file examples/.env \
 
 If already run before but files are stale: `FORCE=1 bash examples/docker-setup-genesis.sh`
 
+**Beacon exits with `Unable to read ... genesis.ssz`**
+
+Same fix — re-run the genesis ceremony (creates `testnet-mainnet-eq/genesis.ssz` via `eth-genesis-state-generator`).
+
 **Permission errors when using `sudo`**
 
 `sudo` switches to root's environment, which may lack installed tools.
@@ -124,7 +130,7 @@ newgrp docker
 | --- | --- |
 | `env.example` | Compose env template: Reth v2.3.0, Lighthouse v8.1.3, FEE_RECIPIENT |
 | `.env` | Actual compose env (copied from `env.example`; gitignored) |
-| `docker-setup-genesis.sh` | One-time PoS genesis ceremony |
+| `docker-setup-genesis.sh` | One-time PoS genesis ceremony (JWT → reth init → config.yaml → genesis.ssz → validator keys) |
 | `docker-compose-main.yml` | Tier 1: Reth `--dev`; Tier 2: Reth + BN + VC |
 | `genesis.mainnet-equivalent.json` | EL genesis template with pre-funded accounts (Prague fork, blobSchedule) |
 | `vars.mainnet-equivalent.env` | Shell-sourced config for scripts (paths, chainId, images) |
