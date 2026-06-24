@@ -3,25 +3,25 @@
 #
 # Usage:
 #   bash scripts/reset-dev.sh
-#   VARS_ENV=examples/vars.mainnet-equivalent.env COMPOSE_FILE=examples/docker-compose-main.yml \
-#     bash scripts/reset-dev.sh
+#   COMPOSE_FILE=examples/docker-compose-main.yml bash scripts/reset-dev.sh
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export ROOT_DIR
-# shellcheck disable=SC1091
-source "$ROOT_DIR/scripts/compose-env.sh"
 
 COMPOSE_FILE_ARGS=()
+ENV_FILE_ARGS=(--env-file "$ROOT_DIR/.env")
 if [[ -n "${COMPOSE_FILE:-}" ]]; then
   COMPOSE_FILE_ARGS=(-f "$COMPOSE_FILE")
+  ENV_FILE_ARGS=(--env-file "$ROOT_DIR/examples/.env")
 fi
 
 echo "==> Stopping Tier 1 (profile dev) and removing volumes..."
 docker compose "${COMPOSE_FILE_ARGS[@]}" --profile dev down -v
 
 echo "==> Restarting Tier 1..."
-bash "$ROOT_DIR/docker-up.sh" "${COMPOSE_FILE_ARGS[@]}" --profile dev up -d
+bash "$ROOT_DIR/scripts/render-genesis.sh"
+docker compose "${ENV_FILE_ARGS[@]}" "${COMPOSE_FILE_ARGS[@]}" --profile dev up -d
 
 echo "==> Tier 1 reset complete."
 echo "    Verify: bash scripts/healthcheck.sh --el-only"

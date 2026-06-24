@@ -25,8 +25,9 @@ VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-o
 ```
 Tier 1 (EL only)                         Tier 2 (full PoS)
 ─────────────────                        ─────────────────
-docker-up.sh --profile dev up -d         docker-setup-genesis.sh   (one-time)
-                                         docker-up.sh --profile full up -d
+docker compose --env-file .env           docker-setup-genesis.sh   (one-time)
+  --profile dev up -d                    docker compose --env-file .env
+                                           --profile full up -d
 
 After start ──────────────────────────── check / healthcheck / send-tx-test
 Config change (Tier 1) ───────────────── reset-dev.sh
@@ -37,38 +38,6 @@ Wipe runtime data ────────────────────�
 ---
 
 ## Deployment
-
-### `docker-up.sh`
-
-**Role:** Render execution genesis from `vars.env`, export Compose variables, then run `docker compose` with the arguments you pass.
-
-Always prefer this over bare `docker compose up` so `genesis.json` `alloc` stays in sync with `MNEMONIC` / balances.
-
-**Usage:**
-
-```bash
-# Dev Tier 1
-bash docker-up.sh --profile dev up -d
-
-# Dev Tier 2 (after docker-setup-genesis.sh)
-bash docker-up.sh --profile full up -d
-
-# Mainnet-equivalent Tier 1
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
-  -f examples/docker-compose-main.yml --profile dev up -d
-
-# Any compose subcommand works (down, logs, ps, …)
-bash docker-up.sh --profile dev down
-bash docker-up.sh --profile full logs -f reth
-```
-
-**What it does internally:**
-
-1. Sources `scripts/compose-env.sh` — exports `RETH_IMAGE`, `LIGHTHOUSE_IMAGE`, ports, `FEE_RECIPIENT` for Docker Compose variable interpolation
-2. Runs `scripts/render-genesis.sh` to ensure `genesis.json` `alloc` stays in sync with `vars.env`
-3. `exec docker compose "$@"` — launches containers with the caller's arguments
-
----
 
 ### `docker-setup-genesis.sh`
 
@@ -93,7 +62,7 @@ bash docker-setup-genesis.sh
 FORCE=1 bash docker-setup-genesis.sh
 
 # Then start within GENESIS_DELAY (default 30s)
-bash docker-up.sh --profile full up -d
+docker compose --env-file .env --profile full up -d
 ```
 
 **Steps performed:**
@@ -120,7 +89,7 @@ bash docker-up.sh --profile full up -d
 bash examples/docker-setup-genesis.sh
 FORCE=1 bash examples/docker-setup-genesis.sh
 
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
+docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile full up -d
 ```
 
@@ -150,7 +119,7 @@ VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/render-genesis.sh
 GENESIS_ACCOUNT_BALANCES_ETH="500000,250000,100,0" bash scripts/render-genesis.sh
 ```
 
-Usually called automatically by `docker-up.sh` and `docker-setup-genesis.sh`. Run manually when you only want to refresh `genesis.json` without starting containers.
+Usually called automatically by `docker-setup-genesis.sh`. Run manually when you only want to refresh `genesis.json` without starting containers.
 
 ---
 
@@ -266,21 +235,6 @@ bash scripts/clean-data.sh --all          # Everything above
 
 Not intended to be run directly. Sourced by other scripts.
 
-### `scripts/compose-env.sh`
-
-**Role:** Load `vars.env` (or `VARS_ENV`) and **export** Docker Compose interpolation variables.
-
-| Exported var | Purpose |
-| --- | --- |
-| `RETH_IMAGE` | Reth container image (pinned in `vars.env`) |
-| `LIGHTHOUSE_IMAGE` | Lighthouse container image |
-| `FEE_RECIPIENT` | Validator `--suggested-fee-recipient` |
-| `RETH_HTTP_PORT`, `BN_HTTP_PORT` | Host port mapping |
-
-**Used by:** `docker-up.sh`, `scripts/reset-dev.sh`
-
----
-
 ### `scripts/source-vars.sh`
 
 **Role:** Load `vars.env` (or `VARS_ENV`) and set **host-side verification** variables.
@@ -318,7 +272,9 @@ Not intended to be run directly. Sourced by other scripts.
 
 ```bash
 pip install -r requirements.txt
-bash docker-up.sh --profile dev up -d
+cp .env.example .env
+bash scripts/render-genesis.sh
+docker compose --env-file .env --profile dev up -d
 bash scripts/healthcheck.sh --el-only --tx
 ```
 
@@ -326,8 +282,9 @@ bash scripts/healthcheck.sh --el-only --tx
 
 ```bash
 pip install -r requirements.txt
+cp .env.example .env
 bash docker-setup-genesis.sh
-bash docker-up.sh --profile full up -d    # within ~30s
+docker compose --env-file .env --profile full up -d    # within ~30s
 bash scripts/healthcheck.sh
 ```
 
@@ -335,7 +292,9 @@ bash scripts/healthcheck.sh
 
 ```bash
 # Edit vars.env (MNEMONIC / GENESIS_ACCOUNT_BALANCES_ETH)
-bash scripts/reset-dev.sh
+docker compose --env-file .env --profile dev down -v
+bash scripts/render-genesis.sh
+docker compose --env-file .env --profile dev up -d
 bash scripts/healthcheck.sh --el-only
 ```
 
@@ -344,7 +303,7 @@ bash scripts/healthcheck.sh --el-only
 ```bash
 # Edit vars.env
 FORCE=1 bash docker-setup-genesis.sh
-bash docker-up.sh --profile full up -d
+docker compose --env-file .env --profile full up -d
 bash scripts/healthcheck.sh
 ```
 

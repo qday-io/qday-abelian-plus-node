@@ -2,6 +2,10 @@
 jwt.hex
 jwt.mainnet-eq.hex
 
+# Docker Compose env files (use .env.example as template)
+.env
+examples/.env
+
 # Built binaries / source of reth
 /reth/target/
 /reth/.git/

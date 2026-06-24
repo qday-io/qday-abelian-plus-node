@@ -9,13 +9,13 @@ Account configuration lives in `examples/vars.mainnet-equivalent.env` (same `MNE
 
 ```bash
 # Tier 1 — EL auto-mining
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
+docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile dev up -d
 VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-only
 
 # Tier 2 — full PoS
 bash examples/docker-setup-genesis.sh
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
+docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile full up -d
 VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh
 ```
@@ -28,7 +28,7 @@ After changing account balances on Tier 1:
 
 ```bash
 docker compose -f examples/docker-compose-main.yml --profile dev down -v
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
+docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile dev up -d
 ```
 
@@ -40,7 +40,7 @@ VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
 | `examples/genesis.mainnet-equivalent.json` | EL genesis template (alloc rendered from env) |
 | `examples/vars.mainnet-equivalent.env` | Paths, chainId, mnemonic, balances |
 | `examples/docker-setup-genesis.sh` | One-time PoS genesis ceremony (6 steps: render genesis → JWT → reth init → lcli testnet → interop-genesis → insecure-validators) |
-| `docker-up.sh` | Render genesis + compose (set `VARS_ENV` for this profile) |
+| `render-genesis.sh` | Render genesis alloc (run manually or set `VARS_ENV`) |
 | `.env.example` | Full variable reference for all profiles |
 
 See [`docs/GENESIS.md`](GENESIS.md) for field reference, [`.env.example`](../.env.example) for variable reference, [`scripts/README.md`](../scripts/README.md) for script catalog.

@@ -6,16 +6,17 @@ No local binaries required.
 ## Quick Start
 
 ```bash
-# 1. Install dependencies
+# 1. Install dependencies + copy env file
 pip install -r requirements.txt
+cp .env.example .env
 
 # 2. Tier 1 — EL auto-mining (fastest)
-bash docker-up.sh --profile dev up -d
+docker compose --env-file .env --profile dev up -d
 bash scripts/healthcheck.sh --el-only --tx
 
 # 3. Tier 2 — full PoS (genesis ceremony + start)
 bash docker-setup-genesis.sh
-bash docker-up.sh --profile full up -d
+docker compose --env-file .env --profile full up -d
 bash scripts/healthcheck.sh
 ```
 
@@ -54,7 +55,7 @@ GENESIS_ACCOUNT_BALANCES_ETH="1000000,1000000,1000000,1000000"
 ```
 
 Addresses derived at `m/44'/60'/0'/0/N` (Hardhat / Anvil path). Rendered into
-`genesis.json` → `alloc` on every `docker-up.sh` run.
+`genesis.json` → `alloc` by `scripts/render-genesis.sh`.
 
 ### Key variables
 
@@ -74,21 +75,22 @@ Full reference: [`.env.example`](.env.example) (22 fields with defaults and desc
 
 ## Deploy
 
-Always use `bash docker-up.sh …` instead of bare `docker compose up` — it renders
-genesis alloc from `vars.env` before starting containers.
+Copy `.env.example` to `.env` before first use. Compose reads image tags and ports
+from `.env` via `--env-file`.
 
 ### Tier 1 — EL auto-mining
 
 Single Reth `--dev` node. No consensus layer. Best for contract / rollup development.
 
 ```bash
-bash docker-up.sh --profile dev up -d
+docker compose --env-file .env --profile dev up -d
 ```
 
 No genesis ceremony required. After changing accounts:
 
 ```bash
-bash scripts/reset-dev.sh
+docker compose --env-file .env --profile dev down -v
+docker compose --env-file .env --profile dev up -d
 ```
 
 ### Tier 2 — full PoS
@@ -96,11 +98,11 @@ bash scripts/reset-dev.sh
 Reth + Lighthouse Beacon + Validator over the Engine API.
 
 ```bash
-# One-time genesis ceremony
+# One-time genesis ceremony (creates jwt.hex, testnet/, node_1/)
 bash docker-setup-genesis.sh
 
 # Start within GENESIS_DELAY seconds (default 30s)
-bash docker-up.sh --profile full up -d
+docker compose --env-file .env --profile full up -d
 ```
 
 The ceremony: render genesis alloc → JWT secret → `reth init` → probe genesis hash
@@ -115,12 +117,12 @@ Chain ID `31337`, Prague EVM rules.
 
 ```bash
 # Tier 1
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
+docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile dev up -d
 
 # Tier 2
 bash examples/docker-setup-genesis.sh
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
+docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile full up -d
 ```
 
@@ -172,16 +174,15 @@ VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-o
 
 ```
 ├── docker-compose.yml              # dev services (profiles: dev, full)
-├── docker-up.sh                    # render genesis + docker compose
 ├── docker-setup-genesis.sh         # one-time dev PoS genesis ceremony
+├── .env                            # dev compose env (copy from .env.example)
+├── .env.example                    # compose env template with all variables
 ├── vars.env                        # dev: paths, chainId, mnemonic, accounts
 ├── genesis.json                    # dev EL genesis (alloc rendered)
 ├── requirements.txt                # Python deps (eth-account)
-├── .env.example                    # all variables with defaults + descriptions
 ├── scripts/
 │   ├── README.md                   # script catalog
 │   ├── render-genesis.sh           # mnemonic → genesis.json alloc
-│   ├── compose-env.sh              # export vars for Docker Compose interpolation
 │   ├── source-vars.sh              # export vars for host-side scripts
 │   ├── lib.sh                      # shared RPC helpers
 │   ├── check.sh                    # quick RPC + chainId + block check
@@ -191,6 +192,7 @@ VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/healthcheck.sh --el-o
 │   └── clean-data.sh               # remove runtime data dirs
 ├── examples/
 │   ├── README.md                   # examples overview
+│   ├── .env                        # mainnet-eq compose env
 │   ├── docker-setup-genesis.sh     # mainnet-eq PoS genesis ceremony
 │   ├── docker-compose-main.yml     # mainnet-equivalent stack
 │   ├── genesis.mainnet-equivalent.json

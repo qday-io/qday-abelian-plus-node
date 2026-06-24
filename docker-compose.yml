@@ -1,19 +1,19 @@
 # Dev L1 via Docker (no local reth/lighthouse binaries).
 #
 #   Tier 1 — dev EL-only:
-#     bash docker-up.sh --profile dev up -d
+#     docker compose --env-file .env --profile dev up -d
 #     bash scripts/healthcheck.sh --el-only --tx
 #
 #   Tier 2 — dev full PoS:
 #     bash docker-setup-genesis.sh
-#     bash docker-up.sh --profile full up -d
+#     docker compose --env-file .env --profile full up -d
 #     bash scripts/healthcheck.sh
 #
 # Mainnet-equivalent: see examples/docker-compose-main.yml
 #
 # Stop: docker compose --profile <dev|full> down
 #
-# Image tags and FEE_RECIPIENT come from vars.env (exported by docker-up.sh).
+# Copy .env.example to .env before starting.
 
 x-reth-healthcheck: &reth-healthcheck
   test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8545'"]

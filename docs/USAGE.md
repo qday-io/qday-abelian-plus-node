@@ -36,8 +36,13 @@ See also [`docs/DOCKER.md`](DOCKER.md).
 
 ## 2. Deploy
 
-Always prefer `bash docker-up.sh …` over bare `docker compose up` so genesis `alloc` is
-rendered from `vars.env` before the node starts.
+Copy env file before first use:
+
+```bash
+cp .env.example .env
+```
+
+Copy `.env.example` to `.env` before first use. Compose reads image tags and ports from `.env` via `--env-file`.
 
 ### Tier 1 — EL auto-mining
 
@@ -45,7 +50,7 @@ Single auto-mining execution node (`reth --dev`). No consensus layer. Best for c
 rollup / bridge testing where you need a working EVM + RPC.
 
 ```bash
-bash docker-up.sh --profile dev up -d
+docker compose --env-file .env --profile dev up -d
 bash scripts/healthcheck.sh --el-only --tx
 ```
 
@@ -59,13 +64,14 @@ Real consensus driving the EL over the Engine API.
 # 1. One-time ceremony: render genesis, reth init, jwt.hex, testnet/, validator keys
 bash docker-setup-genesis.sh
 
-# 2. Start Reth + Beacon + Validator (render genesis again, then compose)
-bash docker-up.sh --profile full up -d
+# 2. Start Reth + Beacon + Validator
+docker compose --env-file .env --profile full up -d
 ```
 
 > ⏱️ Consensus genesis is scheduled at `now + GENESIS_DELAY` (default 30 s). Run
-> `docker-up.sh` **promptly** after setup so all nodes are up before genesis fires.
-> If you’re too slow: `FORCE=1 bash docker-setup-genesis.sh`, then restart.
+> `docker compose --env-file .env --profile full up -d` **promptly** after setup so
+> all nodes are up before genesis fires.
+> If you're too slow: `FORCE=1 bash docker-setup-genesis.sh`, then restart.
 
 ```bash
 bash scripts/healthcheck.sh
@@ -75,12 +81,12 @@ bash scripts/healthcheck.sh
 
 ```bash
 # Tier 1
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
+docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile dev up -d
 
 # Tier 2
 bash examples/docker-setup-genesis.sh
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh \
+docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile full up -d
 ```
 
@@ -112,8 +118,8 @@ bash scripts/render-genesis.sh          # dev (uses vars.env)
 VARS_ENV=examples/vars.mainnet-equivalent.env bash scripts/render-genesis.sh
 ```
 
-**Tier 1:** rendered on every `docker-up.sh` run. If balances look stale, wipe the dev
-volume: `docker compose --profile dev down -v`.
+**Tier 1:** render genesis manually before `compose up`. If
+balances look stale, wipe the dev volume: `docker compose --profile dev down -v`.
 
 **Tier 2:** rendered at the start of `docker-setup-genesis.sh`. After changes, run
 `FORCE=1 bash docker-setup-genesis.sh`.
@@ -212,7 +218,8 @@ Full variable reference (all 22 fields with defaults and descriptions): [`.env.e
 Override any value by exporting it before running a script:
 
 ```bash
-CHAIN_ID=99999 GENESIS_ACCOUNT_BALANCES_ETH="100,100,100,100" bash docker-up.sh --profile dev up -d
+CHAIN_ID=99999 GENESIS_ACCOUNT_BALANCES_ETH="100,100,100,100" bash scripts/render-genesis.sh
+docker compose --env-file .env --profile dev up -d
 ```
 
 | Variable | Default (dev) | Description |
@@ -277,7 +284,7 @@ After changes that affect the genesis block hash (Tier 2):
 
 ```bash
 FORCE=1 bash docker-setup-genesis.sh
-bash docker-up.sh --profile full up -d
+docker compose --env-file .env --profile full up -d
 ```
 
 ---
@@ -286,12 +293,12 @@ bash docker-up.sh --profile full up -d
 
 | Action | Command |
 | --- | --- |
-| Start Tier 1 | `bash docker-up.sh --profile dev up -d` |
-| Start Tier 2 | `bash docker-up.sh --profile full up -d` (after setup) |
+| Start Tier 1 | `docker compose --env-file .env --profile dev up -d` |
+| Start Tier 2 | `docker compose --env-file .env --profile full up -d` (after setup) |
 | Stop | `docker compose --profile dev --profile full down` |
 | Verify health | `bash scripts/healthcheck.sh` |
 | Render genesis only | `bash scripts/render-genesis.sh` |
-| Reset Tier 1 state | `bash scripts/reset-dev.sh` |
+| Reset Tier 1 state | `docker compose --env-file .env --profile dev down -v && docker compose --env-file .env --profile dev up -d` |
 | Reset Tier 2 | `FORCE=1 bash docker-setup-genesis.sh` |
 | Clean runtime data | `bash scripts/clean-data.sh --full` (stop containers first) |
 
@@ -302,12 +309,12 @@ bash docker-up.sh --profile full up -d
 | Symptom | Likely cause / fix |
 | --- | --- |
 | `eth-account` import error | `pip install -r requirements.txt` |
-| Pre-funded balance wrong | Tier 1: `down -v` + `docker-up.sh`; Tier 2: `FORCE=1 docker-setup-genesis.sh` |
+| Pre-funded balance wrong | Tier 1: `down -v`, `render-genesis.sh`, then `up -d`; Tier 2: `FORCE=1 docker-setup-genesis.sh` |
 | `healthcheck.sh`: RPC unreachable | Container not started — `docker compose ps`, check logs |
 | Block number not advancing (Tier 2) | Beacon/validator not running, or missed genesis window — `FORCE=1 docker-setup-genesis.sh`, restart within 30s |
 | Beacon rejects genesis hash | Genesis changed without regenerating CL — `FORCE=1 docker-setup-genesis.sh` |
-| Used `docker compose up` directly | Genesis not rendered — use `docker-up.sh` or run `render-genesis.sh` first |
-| Port already in use | `docker compose down`, or change ports in `vars.env` |
+| Missing `RETH_IMAGE` / `LIGHTHOUSE_IMAGE` | `docker compose` needs `--env-file .env` — copy from `.env.example` |
+| Port already in use | `docker compose down`, or change ports in `.env` and `vars.env` |
 | `lcli` flag error | Pin `LIGHTHOUSE_IMAGE` to a compatible version |
 
 See also [`docs/DOCKER.md`](DOCKER.md) troubleshooting table.

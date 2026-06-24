@@ -73,10 +73,12 @@ into `genesis.json` by `scripts/render-genesis.sh` before every start. This avoi
 drift between config files and runtime state — account 0's private key is always
 derivable from the mnemonic.
 
-### Helper scripts instead of bare `docker compose`
+### `--env-file` for compose variables
 
-`docker-up.sh` wraps `docker compose` to ensure genesis is always in sync with
-`vars.env`. Running bare `docker compose up` risks stale genesis data.
+Docker Compose reads image tags and other interpolation variables from `.env` files
+via `docker compose --env-file .env`. Copy `.env.example` to `.env` to get started.
+Shell scripts (`docker-setup-genesis.sh`, `render-genesis.sh`) source `vars.env`
+for configuration that cannot be expressed as Compose interpolation.
 
 ### Profile-based compose
 
@@ -118,32 +120,30 @@ The EL genesis block hash is embedded into the CL genesis. If EL genesis changes
 
 ## 5. Configuration Model
 
+### Docker Compose
+
 ```
-vars.env (or VARS_ENV override)
+.env.example ──► copy to .env ──► docker compose --env-file .env up -d
+                    │
+                    └── RETH_IMAGE, LIGHTHOUSE_IMAGE, FEE_RECIPIENT, ports, ...
+```
+
+Simple `KEY=VALUE` file. Ports and block time have defaults in the YAML.
+
+### Shell scripts
+
+```
+vars.env
   │
   ├─ source-vars.sh ────► export RPC_URL, BEACON_URL, CHAIN_ID, ...
   │                        (used by healthcheck, check, send-tx-test)
-  │
-  ├─ compose-env.sh ────► export RETH_IMAGE, LIGHTHOUSE_IMAGE, ports, ...
-  │                        (used by docker-up.sh for compose interpolation)
   │
   └─ render-genesis.sh ─► MNEMONIC → HD derivation → genesis.json alloc
                            (preserves non-mnemonic entries)
 ```
 
-Override any variable by exporting before calling a script:
-
-```bash
-CHAIN_ID=99999 GENESIS_ACCOUNT_BALANCES_ETH="100,100" bash docker-up.sh --profile dev up -d
-```
-
-Select mainnet-equivalent profile:
-
-```bash
-VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh ...
-```
-
-Full variable reference: [`.env.example`](.env.example) (22 fields).
+Override: export any variable before calling a script.  
+Select mainnet-eq profile: `VARS_ENV=examples/vars.mainnet-equivalent.env`.
 
 ---
 
@@ -160,7 +160,6 @@ Full variable reference: [`.env.example`](.env.example) (22 fields).
 
 | Script | Type | Purpose |
 | --- | --- | --- |
-| `docker-up.sh` | Runtime | Render genesis + docker compose |
 | `docker-setup-genesis.sh` | One-shot | Tier 2 genesis ceremony |
 | `scripts/render-genesis.sh` | Genesis | MNEMONIC → genesis.json alloc |
 | `scripts/healthcheck.sh` | Verify | PASS/FAIL EL + CL assertions |
@@ -179,8 +178,8 @@ Default for local development. Familiar Hardhat/Anvil test mnemonic and account 
 
 | Tier | Command | Genesis |
 | --- | --- | --- |
-| 1 | `bash docker-up.sh --profile dev up -d` | Rendered inline |
-| 2 | `bash docker-setup-genesis.sh` + `docker-up.sh --profile full up -d` | Full ceremony |
+| 1 | `docker compose --env-file .env --profile dev up -d` | `render-genesis.sh` |
+| 2 | `bash docker-setup-genesis.sh` + `docker compose --env-file .env --profile full up -d` | Full ceremony |
 
 ### Mainnet-equivalent profile (`examples/vars.mainnet-equivalent.env`, chainId 31337)
 
@@ -189,7 +188,7 @@ with dev stack.
 
 | Tier | Command |
 | --- | --- |
-| 1 | `VARS_ENV=examples/vars.mainnet-equivalent.env bash docker-up.sh -f examples/docker-compose-main.yml --profile dev up -d` |
+| 1 | `docker compose --env-file examples/.env -f examples/docker-compose-main.yml --profile dev up -d` |
 | 2 | `bash examples/docker-setup-genesis.sh` + same as Tier 1 but `--profile full` |
 
 ---
@@ -231,7 +230,6 @@ Dev chainId **12345**, mainnet-equivalent **31337**.
 
 ```
 ├── docker-compose.yml              # dev services (profiles: dev, full)
-├── docker-up.sh                    # render genesis + docker compose
 ├── docker-setup-genesis.sh         # Tier 2 genesis ceremony
 ├── vars.env                        # dev config
 ├── genesis.json                    # dev EL genesis (alloc rendered)

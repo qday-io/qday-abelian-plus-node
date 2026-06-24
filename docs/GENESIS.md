@@ -30,7 +30,7 @@ Then render (requires `pip install eth-account`):
 bash scripts/render-genesis.sh
 ```
 
-Or let `docker-up.sh` / `docker-setup-genesis.sh` call it automatically.
+Or let `docker-setup-genesis.sh` call it automatically (Tier 2), or run manually for Tier 1.
 
 | Variable | Default | Description |
 | --- | --- | --- |
@@ -51,11 +51,12 @@ After changing genesis fields that affect the block hash:
 ```bash
 # Tier 1 — wipe dev volume and restart:
 docker compose --profile dev down -v
-bash docker-up.sh --profile dev up -d
+bash scripts/render-genesis.sh
+docker compose --env-file .env --profile dev up -d
 
 # Tier 2 — re-bind consensus layer to new EL genesis hash:
 FORCE=1 bash docker-setup-genesis.sh
-bash docker-up.sh --profile full up -d
+docker compose --env-file .env --profile full up -d
 ```
 
 ---
@@ -174,7 +175,7 @@ not derived from `MNEMONIC`):
 
 | Goal | What to change |
 | --- | --- |
-| **Mainnet-equivalent** | `examples/vars.mainnet-equivalent.env` + `examples/docker-setup-genesis.sh` + `docker-up.sh -f examples/docker-compose-main.yml` |
+| **Mainnet-equivalent** | `examples/vars.mainnet-equivalent.env` + `examples/docker-setup-genesis.sh` + `docker compose --env-file examples/.env -f examples/docker-compose-main.yml` |
 | Different chain ID | `CHAIN_ID` in `vars.env` (render syncs `config.chainId`) |
 | More / different funded accounts | `GENESIS_ACCOUNT_COUNT`, `GENESIS_ACCOUNT_BALANCES_ETH` in `vars.env`, then re-render |
 | Pre-deploy bridge / system contracts | `alloc` → `code` (+ optional `storage`) in genesis template |
@@ -188,7 +189,6 @@ not derived from `MNEMONIC`):
 | Script / path | Usage |
 | --- | --- |
 | `scripts/render-genesis.sh` | Writes `alloc` + `config.chainId` from `vars.env` |
-| `docker-up.sh` | Calls `render-genesis.sh`, then `docker compose` |
 | `docker-setup-genesis.sh` | Calls `render-genesis.sh`, then `reth init` + `lcli` |
 | `docker-compose.yml` | Mounts `./genesis.json` into the Reth container |
 | `vars.env` | `GENESIS_FILE`, `CHAIN_ID`, `MNEMONIC`, account balances |

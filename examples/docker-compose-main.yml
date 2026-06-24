@@ -1,18 +1,20 @@
 # Mainnet-equivalent L1 via Docker (no local reth/lighthouse binaries).
 #
 #   Tier 1 — dev EL-only:
-#     docker compose -f examples/docker-compose-main.yml --profile dev up -d
+#     docker compose --env-file examples/.env \
+#       -f examples/docker-compose-main.yml --profile dev up -d
 #     bash scripts/healthcheck.sh --el-only --tx
 #
 #   Tier 2 — full PoS:
 #     bash examples/docker-setup-genesis.sh
-#     docker compose -f examples/docker-compose-main.yml --profile full up -d
+#     docker compose --env-file examples/.env \
+#       -f examples/docker-compose-main.yml --profile full up -d
 #     bash scripts/healthcheck.sh
 #
 # Stop: docker compose -f examples/docker-compose-main.yml --profile <dev|full> down
 #
 # Paths are relative to this file (examples/).
-# Image tags and FEE_RECIPIENT come from vars.env (exported by docker-up.sh).
+# Image tags and FEE_RECIPIENT come from examples/.env.
 
 x-reth-healthcheck: &reth-healthcheck
   test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8545'"]

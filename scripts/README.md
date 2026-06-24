@@ -12,14 +12,6 @@ Shared variable definitions sourced by other scripts. Reads `vars.env` and expor
 # Sourced internally — not invoked directly
 ```
 
-### `compose-env.sh`
-
-Sources `vars.env` (or `VARS_ENV`) and exports variables for Docker Compose interpolation (image tags, ports, fee recipient). Sourced by `reset-dev.sh` and `docker-up.sh`.
-
-```bash
-# Sourced internally — not invoked directly
-```
-
 ### `render-genesis.sh`
 
 Regenerates the `alloc` section of `genesis.json` from the mnemonic and balance settings in `vars.env`. Preserves any non-mnemonic alloc entries already in the file. Requires `eth-account` Python package.

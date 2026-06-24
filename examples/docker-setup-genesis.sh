@@ -24,6 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/vars.mainnet-equivalent.env"
+export VARS_ENV="$SCRIPT_DIR/vars.mainnet-equivalent.env"
 
 ensure_lcli_image() {
   if docker image inspect "$LCLI_IMAGE" >/dev/null 2>&1; then
