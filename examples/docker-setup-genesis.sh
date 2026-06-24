@@ -74,7 +74,6 @@ JWT_FILE="$(abs_path "$JWT_FILE")"
 RETH_DATADIR="$(abs_path "$RETH_DATADIR")"
 TESTNET_DIR="$(abs_path "$TESTNET_DIR")"
 LCLI_BASE="$(abs_path "${LCLI_VALIDATORS_BASE:-$ROOT_DIR}")"
-mkdir -p "$TESTNET_DIR" "$RETH_DATADIR" "$(dirname "$JWT_FILE")" "$LCLI_BASE"
 
 if [[ "${FORCE:-0}" = "1" ]]; then
   echo "==> FORCE=1: wiping previous mainnet-equivalent state"
@@ -82,6 +81,8 @@ if [[ "${FORCE:-0}" = "1" ]]; then
          "${BEACON_DATADIR:-}" "${VC_DATADIR:-}" \
          "$LCLI_BASE/node_1"
 fi
+
+mkdir -p "$TESTNET_DIR" "$RETH_DATADIR" "$(dirname "$JWT_FILE")" "$LCLI_BASE"
 
 echo "==> Mainnet-equivalent Docker genesis setup"
 echo "    Reth image:       $RETH_IMAGE"
