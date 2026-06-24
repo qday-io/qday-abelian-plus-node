@@ -237,6 +237,9 @@ echo "    genesis.ssz written ($(wc -c < "$TESTNET_DIR/genesis.ssz" | tr -d ' ')
 
 # --- 6. Generate validator keystores ---
 echo "==> lcli mnemonic-validators"
+# lcli refuses to overwrite existing keystore dirs; always regenerate after new genesis.ssz.
+rm -rf "$LCLI_BASE/node_1"
+mkdir -p "$LCLI_BASE/node_1"
 docker run --rm \
   -v "$LCLI_BASE:/base" \
   "$LCLI_IMAGE" \
