@@ -127,6 +127,7 @@ services:
       - lighthouse
       - validator_client
       - --testnet-dir=/testnet
+      - --datadir=/root/.lighthouse
       - --validators-dir=/validators
       - --secrets-dir=/secrets
       - --beacon-nodes=http://beacon:5052
@@ -134,6 +135,7 @@ services:
       - --init-slashing-protection
     volumes:
       - ../testnet-mainnet-eq:/testnet:ro
-      - ../l1-mainnet-eq/node_1/validators:/validators:ro
+      - ../l1-mainnet-eq/node_1/validators:/validators
       - ../l1-mainnet-eq/node_1/secrets:/secrets:ro
+      - ../validator-data-mainnet-eq:/root/.lighthouse
 
