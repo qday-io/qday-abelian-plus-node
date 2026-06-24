@@ -84,21 +84,20 @@ abs_path() {
 }
 
 # Prior docker steps write files as root; remove via container so non-root hosts can re-run.
+# Mount the parent dir — deleting a bind-mount root (/target) itself returns "Resource busy".
 docker_rm_rf() {
-  local target
+  local target parent name
   [[ -n "${1:-}" ]] || return 0
   target="$(abs_path "$1")"
   [[ -e "$target" ]] || return 0
-  docker run --rm -v "${target}:/target" alpine sh -c 'rm -rf /target'
+  parent="$(dirname "$target")"
+  name="$(basename "$target")"
+  docker run --rm -v "${parent}:/parent" alpine sh -c "rm -rf '/parent/${name}'"
 }
 
 docker_rm_under() {
-  local parent rel
   [[ -n "${1:-}" && -n "${2:-}" ]] || return 0
-  parent="$(abs_path "$1")"
-  rel="$2"
-  [[ -e "${parent}/${rel}" ]] || return 0
-  docker run --rm -v "${parent}:/parent" alpine sh -c "rm -rf '/parent/${rel}'"
+  docker_rm_rf "${1}/${2}"
 }
 
 GENESIS_FILE="$(abs_path "$GENESIS_FILE")"
