@@ -167,6 +167,8 @@ CAPELLA_FORK_VERSION: "0x03000001"
 CAPELLA_FORK_EPOCH: 0
 DENEB_FORK_VERSION: "0x04000001"
 DENEB_FORK_EPOCH: 0
+MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256
+SHARD_COMMITTEE_PERIOD: 256
 TERMINAL_TOTAL_DIFFICULTY: 0
 TERMINAL_TOTAL_DIFFICULTY_PASSED: true
 DEPOSIT_CHAIN_ID: $CHAIN_ID
@@ -179,6 +181,8 @@ YAML
 echo "0" > "$TESTNET_DIR/deposit_contract_block.txt"
 echo "0" > "$TESTNET_DIR/deposit_contract_deploy_block.txt"
 echo "0x0000000000000000000000000000000000000000000000000000000000000000" > "$TESTNET_DIR/deposit_contract_block_hash.txt"
+echo "    testnet files written"
+ls -la "$TESTNET_DIR/"
 
 # --- 5. Generate boot node ENR ---
 echo "==> lcli generate-bootnode-enr"
