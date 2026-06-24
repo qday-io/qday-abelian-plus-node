@@ -60,7 +60,7 @@ Install Foundry: `curl -L https://foundry.paradigm.xyz | bash && foundryup`
 | --- | --- | --- |
 | `CHAIN_ID` | `31337` | EVM chain ID |
 | `RETH_IMAGE` | `ghcr.io/paradigmxyz/reth:v2.3.0` | Execution client |
-| `LIGHTHOUSE_IMAGE` | `sigp/lighthouse:v8.2.0` | Consensus client |
+| `LIGHTHOUSE_IMAGE` | `sigp/lighthouse:v8.1.3` | Consensus client |
 
 See [`examples/vars.mainnet-equivalent.env`](examples/vars.mainnet-equivalent.env) for full config.
 

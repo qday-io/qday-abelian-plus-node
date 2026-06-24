@@ -5,7 +5,7 @@
 # deposit-contract/*.json are vendored so compile does not hit raw.githubusercontent.com.
 
 ARG LIGHTHOUSE_IMAGE=sigp/lighthouse:latest
-ARG LIGHTHOUSE_REF=stable
+ARG LIGHTHOUSE_REF=v8.1.3
 
 FROM ${LIGHTHOUSE_IMAGE} AS builder
 USER root

@@ -197,7 +197,7 @@ CHAIN_ID=99999 docker compose --env-file examples/.env \
 | --- | --- | --- |
 | **Docker images** | | |
 | `RETH_IMAGE` | `ghcr.io/paradigmxyz/reth:v2.3.0` | Reth container image (pinned) |
-| `LIGHTHOUSE_IMAGE` | `sigp/lighthouse:v8.2.0` | Lighthouse container image (pinned) |
+| `LIGHTHOUSE_IMAGE` | `sigp/lighthouse:v8.1.3` | Lighthouse container image (pinned) |
 | `LCLI_IMAGE` | `abelian-lcli:latest` | lcli image for CL genesis ceremony |
 | **Network / chain** | | |
 | `CHAIN_ID` | `12345` | EVM chain ID (rendered into genesis) |

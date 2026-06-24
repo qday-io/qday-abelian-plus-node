@@ -122,7 +122,7 @@ newgrp docker
 
 | File | Purpose |
 | --- | --- |
-| `env.example` | Compose env template: Reth v2.3.0, Lighthouse v8.2.0, FEE_RECIPIENT |
+| `env.example` | Compose env template: Reth v2.3.0, Lighthouse v8.1.3, FEE_RECIPIENT |
 | `.env` | Actual compose env (copied from `env.example`; gitignored) |
 | `docker-setup-genesis.sh` | One-time PoS genesis ceremony |
 | `docker-compose-main.yml` | Tier 1: Reth `--dev`; Tier 2: Reth + BN + VC |

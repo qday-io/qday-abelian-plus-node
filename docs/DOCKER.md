@@ -89,7 +89,7 @@ docker compose -f examples/docker-compose-main.yml down
 Compose reads image tags from `examples/.env` via `--env-file`. Shell scripts source them from `examples/vars.mainnet-equivalent.env`:
 
 - `RETH_IMAGE` (default `ghcr.io/paradigmxyz/reth:v2.3.0`)
-- `LIGHTHOUSE_IMAGE` (default `sigp/lighthouse:v8.2.0`)
+- `LIGHTHOUSE_IMAGE` (default `sigp/lighthouse:v8.1.3`)
 - `LCLI_IMAGE` (default `abelian-lcli:latest`)
 - `FEE_RECIPIENT` — passed to validator `--suggested-fee-recipient` via compose
 
