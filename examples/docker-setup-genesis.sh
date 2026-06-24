@@ -83,6 +83,24 @@ abs_path() {
   python3 -c 'import os,sys; print(os.path.abspath(sys.argv[1]))' "$1"
 }
 
+# Prior docker steps write files as root; remove via container so non-root hosts can re-run.
+docker_rm_rf() {
+  local target
+  [[ -n "${1:-}" ]] || return 0
+  target="$(abs_path "$1")"
+  [[ -e "$target" ]] || return 0
+  docker run --rm -v "${target}:/target" alpine sh -c 'rm -rf /target'
+}
+
+docker_rm_under() {
+  local parent rel
+  [[ -n "${1:-}" && -n "${2:-}" ]] || return 0
+  parent="$(abs_path "$1")"
+  rel="$2"
+  [[ -e "${parent}/${rel}" ]] || return 0
+  docker run --rm -v "${parent}:/parent" alpine sh -c "rm -rf '/parent/${rel}'"
+}
+
 GENESIS_FILE="$(abs_path "$GENESIS_FILE")"
 JWT_FILE="$(abs_path "$JWT_FILE")"
 RETH_DATADIR="$(abs_path "$RETH_DATADIR")"
@@ -91,9 +109,11 @@ LCLI_BASE="$(abs_path "${LCLI_VALIDATORS_BASE:-$ROOT_DIR}")"
 
 if [[ "${FORCE:-0}" = "1" ]]; then
   echo "==> FORCE=1: wiping previous mainnet-equivalent state"
-  rm -rf "$RETH_DATADIR" "$TESTNET_DIR" \
-         "${BEACON_DATADIR:-}" "${VC_DATADIR:-}" \
-         "$LCLI_BASE/node_1"
+  docker_rm_rf "$RETH_DATADIR"
+  docker_rm_rf "$TESTNET_DIR"
+  docker_rm_rf "${BEACON_DATADIR:-}"
+  docker_rm_rf "${VC_DATADIR:-}"
+  docker_rm_under "$LCLI_BASE" "node_1"
 fi
 
 mkdir -p "$TESTNET_DIR" "$RETH_DATADIR" "$(dirname "$JWT_FILE")" "$LCLI_BASE"
@@ -238,9 +258,9 @@ echo "    genesis.ssz written ($(wc -c < "$TESTNET_DIR/genesis.ssz" | tr -d ' ')
 # --- 6. Generate validator keystores ---
 echo "==> lcli mnemonic-validators"
 # lcli refuses to overwrite existing keystore dirs; always regenerate after new genesis.ssz.
-rm -rf "$LCLI_BASE/node_1"
+docker_rm_under "$LCLI_BASE" "node_1"
 mkdir -p "$LCLI_BASE/node_1"
-docker run --rm \
+docker run --rm --user "$(id -u):$(id -g)" \
   -v "$LCLI_BASE:/base" \
   "$LCLI_IMAGE" \
   mnemonic-validators \
