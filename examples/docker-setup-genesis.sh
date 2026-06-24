@@ -193,7 +193,8 @@ docker run --rm \
   mnemonic-validators \
   --count "$VALIDATOR_COUNT" \
   --base-dir /base \
-  --mnemonic "$MNEMONIC"
+  --mnemonic-phrase "$MNEMONIC" \
+  --node-count 1
 
 echo
 echo "==> Mainnet-equivalent genesis setup complete."
