@@ -15,6 +15,7 @@ Docker-only guide for deploying, operating, verifying, and configuring the L1 de
 - [7. Customizing genesis](#7-customizing-genesis)
 - [8. Operations](#8-operations)
 - [9. Troubleshooting](#9-troubleshooting)
+- [10. Deploy committer](#10-deploy-committer)
 
 ---
 
@@ -274,3 +275,10 @@ docker compose --env-file examples/.env \
 | `lcli` flag error | Pin `LIGHTHOUSE_IMAGE` to a compatible version |
 
 See also [`docs/DOCKER.md`](DOCKER.md) troubleshooting table.
+
+---
+
+## 10. Deploy committer
+
+The committer component submits state-anchor transactions to the L1 chain. Source and
+instructions: [qday-anchor-relay/qday](https://github.com/qday-io/qday-anchor-relay/tree/main/qday).
