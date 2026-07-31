@@ -7,16 +7,18 @@ The file follows the standard Ethereum genesis format consumed by Reth (and othe
 clients). It defines the state of block `0` — chain rules, header fields, and initial
 account balances — before any transactions are executed.
 
-> **Related config:** `vars.env` sets `CHAIN_ID=12345`, which must stay in sync with
-> `config.chainId` below. Pre-funded accounts are configured via `MNEMONIC` and
-> Pre-funded accounts are hardcoded in `examples/genesis.mainnet-equivalent.json` (`alloc` field).
-> Edit the JSON directly to add or change accounts.
+> **Related config:** `examples/vars.mainnet-equivalent.env` sets `CHAIN_ID=31337`, which must
+> stay in sync with `config.chainId` below. Prefunded accounts are rendered from `MNEMONIC` /
+> `GENESIS_ACCOUNT_*` by `examples/docker-setup-genesis.sh` into
+> `testnet-mainnet-eq/genesis.json` (Tier 2). Tier 1 (`--profile dev`) still mounts the
+> committed template `examples/genesis.mainnet-equivalent.json` directly.
 
 ---
 
-## Rendering from `vars.env`
+## Rendering from `vars.mainnet-equivalent.env`
 
-Do **not** edit `alloc` by hand for routine dev work. Configure accounts in `vars.env`:
+Do **not** edit `alloc` by hand for routine Tier 2 work. Configure accounts in
+`examples/vars.mainnet-equivalent.env`:
 
 ```bash
 MNEMONIC="test test test test test test test test test test test junk"
@@ -25,16 +27,15 @@ GENESIS_ACCOUNT_BALANCE_ETH=1000000
 GENESIS_ACCOUNT_BALANCES_ETH="1000000,1000000,1000000,1000000"
 ```
 
-Then restart (Tier 1) or regenerate (Tier 2):
+Then regenerate (Tier 2):
 
 ```bash
-# Tier 1
-docker compose -f examples/docker-compose-main.yml --profile dev down -v
+FORCE=1 bash examples/docker-setup-genesis.sh
 docker compose --env-file examples/.env \
-  -f examples/docker-compose-main.yml --profile dev up -d
+  -f examples/docker-compose-main.yml --profile full up -d
 ```
 
-Or let `docker-setup-genesis.sh` call it automatically (Tier 2), or run manually for Tier 1.
+`docker-setup-genesis.sh` renders alloc automatically before `reth init`.
 
 | Variable | Default | Description |
 | --- | --- | --- |
@@ -42,25 +43,26 @@ Or let `docker-setup-genesis.sh` call it automatically (Tier 2), or run manually
 | `GENESIS_ACCOUNT_COUNT` | `4` | How many HD indices to fund |
 | `GENESIS_ACCOUNT_BALANCE_ETH` | `1000000` | Fallback balance (ETH) when per-account list is omitted |
 | `GENESIS_ACCOUNT_BALANCES_ETH` | four × `1000000` | Comma-separated ETH balance per account index |
-| `GENESIS_FILE` | `genesis.json` | Output file (mainnet-equiv: `examples/genesis.mainnet-equivalent.json`) |
-| `CHAIN_ID` | `12345` | Written into `config.chainId` during render |
+| `GENESIS_TEMPLATE` | `examples/genesis.mainnet-equivalent.json` | Input template (fork config + non-mnemonic alloc) |
+| `CHAIN_ID` | `31337` | Written into `config.chainId` during render |
 
-The renderer preserves **non-mnemonic** `alloc` entries already in the genesis file
+The renderer preserves **non-mnemonic** `alloc` entries already in the genesis template
 (e.g. the `0x…00ff` placeholder in mainnet-equivalent genesis).
 
-> See [`.env.example`](../.env.example) for the full variable listing with defaults and descriptions.
+> See [`examples/vars.mainnet-equivalent.env`](../examples/vars.mainnet-equivalent.env) for defaults.
 
 After changing genesis fields that affect the block hash:
 
 ```bash
-# Tier 1 — wipe dev volume and restart:
+# Tier 1 — wipe dev volume and restart (edit template alloc by hand, or keep defaults):
 docker compose -f examples/docker-compose-main.yml --profile dev down -v
 docker compose --env-file examples/.env \
   -f examples/docker-compose-main.yml --profile dev up -d
 
 # Tier 2 — re-bind consensus layer to new EL genesis hash:
-FORCE=1 bash docker-setup-genesis.sh
-docker compose --env-file .env --profile full up -d
+FORCE=1 bash examples/docker-setup-genesis.sh
+docker compose --env-file examples/.env \
+  -f examples/docker-compose-main.yml --profile full up -d
 ```
 
 ---
@@ -180,8 +182,8 @@ not derived from `MNEMONIC`):
 | Goal | What to change |
 | --- | --- |
 | **Mainnet-equivalent** | `examples/vars.mainnet-equivalent.env` + `examples/docker-setup-genesis.sh` + `docker compose --env-file examples/.env -f examples/docker-compose-main.yml` |
-| Different chain ID | `CHAIN_ID` in `vars.env` (render syncs `config.chainId`) |
-| More / different funded accounts | `GENESIS_ACCOUNT_COUNT`, `GENESIS_ACCOUNT_BALANCES_ETH` in `vars.env`, then re-render |
+| Different chain ID | `CHAIN_ID` in `vars.mainnet-equivalent.env` (render syncs `config.chainId`) |
+| More / different funded accounts | `GENESIS_ACCOUNT_COUNT`, `GENESIS_ACCOUNT_BALANCES_ETH` in vars, then `FORCE=1` setup |
 | Pre-deploy bridge / system contracts | `alloc` → `code` (+ optional `storage`) in genesis template |
 | Higher block gas limit | `gasLimit` in genesis template (hex gas units, e.g. `0x2faf080` = 50M) |
 | Enable a newer fork (e.g. Prague) | Add the corresponding `*Time` or `*Block` field per your Reth/Lighthouse version docs |
@@ -194,7 +196,7 @@ not derived from `MNEMONIC`):
 | --- | --- |
 | `docker-setup-genesis.sh` | Runs `reth init` + `lcli` for full PoS genesis |
 | `docker-compose.yml` | Mounts `./genesis.json` into the Reth container |
-| `vars.env` | `GENESIS_FILE`, `CHAIN_ID`, `MNEMONIC`, account balances |
+| `vars.mainnet-equivalent.env` | `GENESIS_TEMPLATE`, `CHAIN_ID`, `MNEMONIC`, account balances |
 
 The execution genesis block hash (derived from these fields) is embedded into the
 consensus-layer genesis during `docker-setup-genesis.sh`. If you change header or `alloc`

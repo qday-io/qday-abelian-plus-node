@@ -15,12 +15,18 @@
 
 ## Pre-funded accounts
 
-Accounts are hardcoded in `genesis.json` (`alloc` field). To add or change accounts,
-edit `examples/genesis.mainnet-equivalent.json` directly.
+**Tier 2:** `examples/docker-setup-genesis.sh` renders `alloc` from `MNEMONIC` /
+`GENESIS_ACCOUNT_*` in `examples/vars.mainnet-equivalent.env` into
+`testnet-mainnet-eq/genesis.json` (compose `--profile full` mounts that file).
+
+**Tier 1:** `--profile dev` still mounts `examples/genesis.mainnet-equivalent.json`
+directly — edit that template's `alloc` (or keep the default Hardhat accounts).
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `PREFUNDED_ACCOUNT` | Hardhat account #0 | Account used for healthcheck balance check |
+| `MNEMONIC` | Hardhat test mnemonic | Derives prefunded EL accounts + CL validators |
+| `GENESIS_ACCOUNT_COUNT` | `4` | Number of HD indices to fund |
+| `GENESIS_ACCOUNT_BALANCES_ETH` | four × `1000000` | Per-account ETH balances |
 
 ## Profiles
 
@@ -69,7 +75,11 @@ bash scripts/healthcheck.sh --env examples/vars.mainnet-equivalent.env
 
 **Custom account balances (example)**
 
-Edit `examples/genesis.mainnet-equivalent.json` alloc field directly.
+```bash
+# Edit GENESIS_ACCOUNT_* / MNEMONIC in examples/vars.mainnet-equivalent.env, then:
+FORCE=1 bash examples/docker-setup-genesis.sh
+```
+
 **Verify**
 
 ```bash

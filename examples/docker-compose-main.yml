@@ -82,7 +82,8 @@ services:
     image: ${RETH_IMAGE}
     command: *reth-pos-cmd
     volumes:
-      - ./genesis.mainnet-equivalent.json:/genesis.json:ro
+      # Written by examples/docker-setup-genesis.sh (MNEMONIC → alloc).
+      - ../testnet-mainnet-eq/genesis.json:/genesis.json:ro
       - ../jwt.mainnet-eq.hex:/jwt.hex:ro
       - ../reth-data-mainnet-eq:/root/.local/share/reth
     ports:

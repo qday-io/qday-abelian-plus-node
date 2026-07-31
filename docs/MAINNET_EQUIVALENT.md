@@ -2,8 +2,8 @@
 
 Private L1 with mainnet-grade EVM rules (Prague + `blobSchedule`). `chainId` **31337**.
 
-Account configuration lives in `examples/vars.mainnet-equivalent.env` (same `MNEMONIC` /
-`GENESIS_ACCOUNT_*` variables as dev `vars.env`).
+Account configuration lives in `examples/vars.mainnet-equivalent.env` (`MNEMONIC`,
+`GENESIS_ACCOUNT_*`). Tier 2 setup renders them into EL `alloc` automatically.
 
 ## Commands
 
@@ -37,7 +37,7 @@ docker compose --env-file examples/.env \
 | File | Purpose |
 | --- | --- |
 | `examples/docker-compose-main.yml` | Compose stack |
-| `examples/genesis.mainnet-equivalent.json` | EL genesis template (alloc rendered from env) |
+| `examples/genesis.mainnet-equivalent.json` | EL genesis template (fork config; Tier 2 alloc rendered from env) |
 | `examples/vars.mainnet-equivalent.env` | Paths, chainId, mnemonic, balances |
 | `examples/docker-setup-genesis.sh` | One-time PoS genesis ceremony (6 steps: JWT → reth init → config.yaml → bootnode-enr → mnemonic-validators) |
 | `genesis.mainnet-equivalent.json` | EL genesis with pre-funded accounts (Prague fork, blobSchedule) |

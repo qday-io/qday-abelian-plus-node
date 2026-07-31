@@ -4,12 +4,13 @@
 #
 # Steps:
 #   1. Generate JWT hex secret (Engine API auth between EL and CL)
-#   2. reth init — initialise reth datadir with custom genesis, extract genesis block hash
-#   3. (RPC fallback) Start a temporary reth node and query eth_getBlockByNumber(0x0)
-#      to obtain the genesis block hash if step 2 failed to produce one
-#   4. Write testnet config.yaml (spec overrides, fork epochs, TTD=0) + deposit metadata
-#   5. eth-genesis-state-generator — build genesis.ssz (EL block hash embedded from genesis.json)
-#   6. lcli mnemonic-validators — generate validator keystores from mnemonic
+#   2. Render EL genesis — MNEMONIC + GENESIS_ACCOUNT_* → alloc (+ sync chainId)
+#   3. reth init — initialise reth datadir with custom genesis, extract genesis block hash
+#   4. (RPC fallback) Start a temporary reth node and query eth_getBlockByNumber(0x0)
+#      to obtain the genesis block hash if step 3 failed to produce one
+#   5. Write testnet config.yaml (spec overrides, fork epochs, TTD=0) + deposit metadata
+#   6. eth-genesis-state-generator — build genesis.ssz (EL block hash embedded from genesis.json)
+#   7. lcli mnemonic-validators — generate validator keystores from mnemonic
 #
 # Usage:
 #   bash examples/docker-setup-genesis.sh
@@ -100,7 +101,102 @@ docker_rm_under() {
   docker_rm_rf "${1}/${2}"
 }
 
-GENESIS_FILE="$(abs_path "$GENESIS_FILE")"
+# Prefer local cast (already required by healthcheck); fall back to Foundry image.
+cast_cmd() {
+  if command -v cast >/dev/null 2>&1; then
+    cast "$@"
+  else
+    docker run --rm ghcr.io/foundry-rs/foundry:latest cast "$@"
+  fi
+}
+
+# Render EL genesis from template:
+#   - fund GENESIS_ACCOUNT_COUNT addresses from MNEMONIC (m/44'/60'/0'/0/N)
+#   - preserve non-mnemonic alloc entries (e.g. 0x…00ff)
+#   - sync config.chainId with CHAIN_ID
+render_el_genesis() {
+  local template="$1"
+  local output="$2"
+  if [[ ! -f "$template" ]]; then
+    echo "ERROR: EL genesis template not found: $template" >&2
+    exit 1
+  fi
+  if ! command -v cast >/dev/null 2>&1 && ! docker info >/dev/null 2>&1; then
+    echo "ERROR: need 'cast' (Foundry) or Docker to derive MNEMONIC addresses" >&2
+    echo "  Install: curl -L https://foundry.paradigm.xyz | bash && foundryup" >&2
+    exit 1
+  fi
+
+  GENESIS_ACCOUNT_COUNT="${GENESIS_ACCOUNT_COUNT:-4}"
+  GENESIS_ACCOUNT_BALANCE_ETH="${GENESIS_ACCOUNT_BALANCE_ETH:-1000000}"
+  GENESIS_ACCOUNT_BALANCES_ETH="${GENESIS_ACCOUNT_BALANCES_ETH:-}"
+
+  # Export for the Python helper below (cast_cmd is a bash function — derive in bash).
+  local -a addrs=()
+  local i addr
+  # Strip up to 64 prior mnemonic indices from this phrase so COUNT shrinks / re-runs stay clean.
+  local strip_to=64
+  if (( GENESIS_ACCOUNT_COUNT > strip_to )); then
+    strip_to="$GENESIS_ACCOUNT_COUNT"
+  fi
+  for ((i = 0; i < strip_to; i++)); do
+    addr="$(cast_cmd wallet address --mnemonic "$MNEMONIC" --mnemonic-index "$i" | tr -d '[:space:]')"
+    if [[ ! "$addr" =~ ^0x[0-9a-fA-F]{40}$ ]]; then
+      echo "ERROR: failed to derive address for mnemonic index $i (got: $addr)" >&2
+      exit 1
+    fi
+    addrs+=("$addr")
+  done
+
+  MNEMONIC_ADDRS="$(printf '%s\n' "${addrs[@]}")" \
+  GENESIS_ACCOUNT_COUNT="$GENESIS_ACCOUNT_COUNT" \
+  GENESIS_ACCOUNT_BALANCE_ETH="$GENESIS_ACCOUNT_BALANCE_ETH" \
+  GENESIS_ACCOUNT_BALANCES_ETH="$GENESIS_ACCOUNT_BALANCES_ETH" \
+  CHAIN_ID="$CHAIN_ID" \
+  python3 - "$template" "$output" <<'PY'
+import json, os, sys
+
+template_path, output_path = sys.argv[1], sys.argv[2]
+count = int(os.environ["GENESIS_ACCOUNT_COUNT"])
+default_bal = os.environ.get("GENESIS_ACCOUNT_BALANCE_ETH", "1000000").strip()
+balances_raw = os.environ.get("GENESIS_ACCOUNT_BALANCES_ETH", "").strip()
+chain_id = int(os.environ["CHAIN_ID"])
+addrs = [a.strip() for a in os.environ["MNEMONIC_ADDRS"].splitlines() if a.strip()]
+
+if balances_raw:
+    balances = [b.strip() for b in balances_raw.split(",") if b.strip() != ""]
+else:
+    balances = []
+if len(balances) < count:
+    balances.extend([default_bal] * (count - len(balances)))
+balances = balances[:count]
+
+with open(template_path, encoding="utf-8") as f:
+    genesis = json.load(f)
+
+managed = {a.lower() for a in addrs}
+new_alloc = {}
+for addr, entry in (genesis.get("alloc") or {}).items():
+    if addr.lower() not in managed:
+        new_alloc[addr] = entry
+
+for i in range(count):
+    wei = int(balances[i]) * 10**18
+    new_alloc[addrs[i]] = {"balance": hex(wei)}
+
+genesis["alloc"] = new_alloc
+genesis.setdefault("config", {})["chainId"] = chain_id
+
+with open(output_path, "w", encoding="utf-8") as f:
+    json.dump(genesis, f, indent=2)
+    f.write("\n")
+PY
+
+  echo "    rendered $output"
+  echo "    accounts: $GENESIS_ACCOUNT_COUNT (from MNEMONIC), chainId=$CHAIN_ID"
+}
+
+GENESIS_TEMPLATE="$(abs_path "${GENESIS_TEMPLATE:-$GENESIS_FILE}")"
 JWT_FILE="$(abs_path "$JWT_FILE")"
 RETH_DATADIR="$(abs_path "$RETH_DATADIR")"
 TESTNET_DIR="$(abs_path "$TESTNET_DIR")"
@@ -117,12 +213,16 @@ fi
 
 mkdir -p "$TESTNET_DIR" "$RETH_DATADIR" "$(dirname "$JWT_FILE")" "$LCLI_BASE"
 
+# Rendered genesis consumed by reth init / CL genesis / compose --profile full.
+GENESIS_FILE="$TESTNET_DIR/genesis.json"
+
 echo "==> Mainnet-equivalent Docker genesis setup"
 echo "    Reth image:           $RETH_IMAGE"
 echo "    Lighthouse image:     $LIGHTHOUSE_IMAGE"
 echo "    LCLI image:           $LCLI_IMAGE"
 echo "    Beacon-genesis image: $BEACON_GENESIS_IMAGE"
-echo "    Genesis:              $GENESIS_FILE"
+echo "    Genesis template:     $GENESIS_TEMPLATE"
+echo "    Genesis (rendered):   $GENESIS_FILE"
 echo "    chainId:              $CHAIN_ID"
 
 # --- 1. JWT ---
@@ -131,7 +231,11 @@ if [[ ! -f "$JWT_FILE" ]]; then
   docker run --rm alpine sh -c 'apk add --no-cache openssl >/dev/null && openssl rand -hex 32' >"$JWT_FILE"
 fi
 
-# --- 2. reth init + genesis hash ---
+# --- 2. Render EL genesis (MNEMONIC → alloc) ---
+echo "==> Rendering EL genesis from MNEMONIC"
+render_el_genesis "$GENESIS_TEMPLATE" "$GENESIS_FILE"
+
+# --- 3. reth init + genesis hash ---
 echo "==> reth init"
 if ! RETH_INIT_OUT=$(docker run --rm \
   -v "$GENESIS_FILE:/genesis.json:ro" \
@@ -145,7 +249,7 @@ echo "$RETH_INIT_OUT"
 GENESIS_HASH=$(echo "$RETH_INIT_OUT" | sed 's/\x1b\[[0-9;]*m//g' \
   | grep 'Genesis block written' | grep -oE '0x[0-9a-fA-F]{64}' | head -1)
 
-# --- 3. Genesis block hash (RPC fallback) ---
+# --- 4. Genesis block hash (RPC fallback) ---
 if [[ -z "$GENESIS_HASH" ]]; then
   echo "==> Reading execution genesis block hash (RPC fallback)"
   docker rm -f "$PROBE_CONTAINER" >/dev/null 2>&1 || true
@@ -182,7 +286,7 @@ if [[ -z "$GENESIS_HASH" ]]; then
 fi
 echo "    genesis hash = $GENESIS_HASH"
 
-# Build helper images before setting MIN_GENESIS_TIME (genesis window starts after step 4).
+# Build helper images before setting MIN_GENESIS_TIME (genesis window starts after step 5).
 ensure_lcli_image
 ensure_beacon_genesis_image
 
@@ -192,7 +296,7 @@ if [[ ! -f "$CL_CONFIG_TEMPLATE" ]]; then
   exit 1
 fi
 
-# --- 4. Write testnet config.yaml + deposit metadata ---
+# --- 5. Write testnet config.yaml + deposit metadata ---
 GENESIS_TIME=$(($(date +%s) + GENESIS_DELAY))
 echo "==> Writing testnet config (genesis at +${GENESIS_DELAY}s)"
 sed \
@@ -211,7 +315,7 @@ echo "[]" > "$TESTNET_DIR/bootstrap_nodes.yaml"
 echo "    testnet config written"
 ls -la "$TESTNET_DIR/"
 
-# --- 5. Generate CL genesis.ssz (embeds EL genesis block hash from genesis.json) ---
+# --- 6. Generate CL genesis.ssz (embeds EL genesis block hash from genesis.json) ---
 echo "==> eth-genesis-state-generator beaconchain -> genesis.ssz"
 cat > "$TESTNET_DIR/mnemonics.yaml" <<YAML
 - mnemonic: "${MNEMONIC}"
@@ -237,7 +341,7 @@ if [[ ! -s "$TESTNET_DIR/genesis.ssz" ]]; then
 fi
 echo "    genesis.ssz written ($(wc -c < "$TESTNET_DIR/genesis.ssz" | tr -d ' ') bytes)"
 
-# --- 6. Generate validator keystores ---
+# --- 7. Generate validator keystores ---
 echo "==> lcli mnemonic-validators"
 # lcli refuses to overwrite existing keystore dirs; always regenerate after new genesis.ssz.
 docker_rm_under "$LCLI_BASE" "node_1"

@@ -17,7 +17,8 @@ Best for contract / rollup development.
 cp examples/env.example examples/.env    # compose image tags
 ```
 
-> Pre-funded accounts are hardcoded in `genesis.mainnet-equivalent.json`.
+> Prefunded accounts: Tier 2 renders from `MNEMONIC` / `GENESIS_ACCOUNT_*` in
+> `vars.mainnet-equivalent.env`; Tier 1 uses `genesis.mainnet-equivalent.json` `alloc`.
 
 **2. Start the EL node (every start)**
 

@@ -95,9 +95,12 @@ Details: [`docs/MAINNET_EQUIVALENT.md`](MAINNET_EQUIVALENT.md).
 
 ## 3. Pre-funded accounts
 
-Pre-funded accounts are hardcoded in `examples/genesis.mainnet-equivalent.json` (`alloc` field).
+**Tier 2:** rendered from `MNEMONIC` / `GENESIS_ACCOUNT_*` in
+`examples/vars.mainnet-equivalent.env` by `examples/docker-setup-genesis.sh`.
 
-Default account #0 (also `FEE_RECIPIENT` and `PREFUNDED_ACCOUNT` in health checks):
+**Tier 1:** uses the committed `alloc` in `examples/genesis.mainnet-equivalent.json`.
+
+Default account #0 (also `FEE_RECIPIENT` in health checks):
 
 - Address: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
 - Private key (test only): `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
@@ -228,8 +231,9 @@ CHAIN_ID=99999 docker compose --env-file examples/.env \
 | `VALIDATORS_DIR` | `node_1/validators` | Validator keystore directory |
 | `SECRETS_DIR` | `node_1/secrets` | Validator secrets directory |
 
-> `CHAIN_ID` is set in `examples/vars.mainnet-equivalent.env`. After changes,
-> re-render and restart (Tier 1: `down -v`; Tier 2: `FORCE=1 docker-setup-genesis.sh`).
+> `CHAIN_ID` / `GENESIS_ACCOUNT_*` / `MNEMONIC` are set in
+> `examples/vars.mainnet-equivalent.env`. After changes, re-render and restart
+> (Tier 1: `down -v`; Tier 2: `FORCE=1 docker-setup-genesis.sh`).
 
 ---
 
