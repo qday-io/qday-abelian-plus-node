@@ -45,35 +45,14 @@ fi
 source "$VARS_ENV"
 export VARS_ENV
 
-ensure_lcli_image() {
-  if docker image inspect "$LCLI_IMAGE" >/dev/null 2>&1; then
+ensure_image() {
+  local image="$1"
+  if docker image inspect "$image" >/dev/null 2>&1; then
     return 0
   fi
-  if ! docker image inspect "${LIGHTHOUSE_IMAGE:-sigp/lighthouse:latest}" >/dev/null 2>&1; then
-    echo "ERROR: need ${LIGHTHOUSE_IMAGE:-sigp/lighthouse:latest} locally before building lcli" >&2
-    echo "       docker pull ${LIGHTHOUSE_IMAGE:-sigp/lighthouse:latest}" >&2
-    exit 1
-  fi
-  echo "==> Building $LCLI_IMAGE (uses cached Lighthouse image; first run may take several minutes)"
-  echo "    Needs network: rustup + github.com (not Docker Hub base images)"
-  if ! docker build \
-    --build-arg "LIGHTHOUSE_IMAGE=${LIGHTHOUSE_IMAGE:-sigp/lighthouse:latest}" \
-    -t "$LCLI_IMAGE" -f "$ROOT_DIR/docker/Dockerfile.lcli" "$ROOT_DIR/docker"; then
-    echo "ERROR: lcli image build failed (check GitHub/rust-lang network access)" >&2
-    exit 1
-  fi
-}
-
-ensure_beacon_genesis_image() {
-  if docker image inspect "$BEACON_GENESIS_IMAGE" >/dev/null 2>&1; then
-    return 0
-  fi
-  echo "==> Building $BEACON_GENESIS_IMAGE (first run may take several minutes)"
-  echo "    Needs network: golang + github.com"
-  if ! docker build \
-    -t "$BEACON_GENESIS_IMAGE" \
-    -f "$ROOT_DIR/docker/Dockerfile.beacon-genesis" "$ROOT_DIR/docker"; then
-    echo "ERROR: beacon-genesis image build failed (check GitHub network access)" >&2
+  echo "==> Pulling $image"
+  if ! docker pull "$image"; then
+    echo "ERROR: failed to pull $image" >&2
     exit 1
   fi
 }
@@ -287,8 +266,8 @@ fi
 echo "    genesis hash = $GENESIS_HASH"
 
 # Build helper images before setting MIN_GENESIS_TIME (genesis window starts after step 5).
-ensure_lcli_image
-ensure_beacon_genesis_image
+ensure_image "$LCLI_IMAGE"
+ensure_image "$BEACON_GENESIS_IMAGE"
 
 CL_CONFIG_TEMPLATE="${CL_CONFIG_TEMPLATE:-$SCRIPT_DIR/cl-config.mainnet-equivalent.yaml}"
 if [[ ! -f "$CL_CONFIG_TEMPLATE" ]]; then

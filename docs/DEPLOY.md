@@ -202,7 +202,8 @@ CHAIN_ID=99999 docker compose --env-file examples/.env \
 | **Docker images** | | |
 | `RETH_IMAGE` | `ghcr.io/paradigmxyz/reth:v2.3.0` | Reth container image (pinned) |
 | `LIGHTHOUSE_IMAGE` | `sigp/lighthouse:v8.1.3` | Lighthouse container image (pinned) |
-| `LCLI_IMAGE` | `abelian-lcli:latest` | lcli image for CL genesis ceremony |
+| `LCLI_IMAGE` | `sunhongtao/qday-abelian-lcli:latest` | lcli image for CL genesis ceremony (pulled) |
+| `BEACON_GENESIS_IMAGE` | `sunhongtao/qday-abelian-beacon-genesis:latest` | eth-genesis-state-generator image (pulled) |
 | **Network / chain** | | |
 | `CHAIN_ID` | `12345` | EVM chain ID (rendered into genesis) |
 | `VALIDATOR_COUNT` | `1` | Validators in CL genesis (Tier 2) |

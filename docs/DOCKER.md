@@ -100,7 +100,8 @@ Compose reads image tags from `examples/.env` via `--env-file`. Shell scripts so
 
 - `RETH_IMAGE` (default `ghcr.io/paradigmxyz/reth:v2.3.0`)
 - `LIGHTHOUSE_IMAGE` (default `sigp/lighthouse:v8.1.3`)
-- `LCLI_IMAGE` (default `abelian-lcli:latest`)
+- `LCLI_IMAGE` (default `sunhongtao/qday-abelian-lcli:latest`)
+- `BEACON_GENESIS_IMAGE` (default `sunhongtao/qday-abelian-beacon-genesis:latest`)
 - `FEE_RECIPIENT` — passed to validator `--suggested-fee-recipient` via compose
 
 Full variable reference: see [`examples/env.example`](../examples/env.example).

@@ -66,7 +66,7 @@ docker compose --env-file .env --profile full up -d
 **Steps performed:**
 2. `reth init` in a container — initialise datadir, extract execution genesis block hash
 3. RPC fallback — start temp Reth node and query `eth_getBlockByNumber(0x0)` if step 2 failed to produce the hash
-4. Build/use `abelian-lcli` image and run `lcli generate-bootnode-enr` — pre-genesis boot ENR
+4. Pull helper images (`LCLI_IMAGE`, `BEACON_GENESIS_IMAGE`) if missing
 5. `lcli mnemonic-validators` — validator keystores under `$LCLI_VALIDATORS_BASE`
 
 > Not needed for Tier 1 (`--profile dev`).
