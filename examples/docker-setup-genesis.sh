@@ -265,7 +265,7 @@ if [[ -z "$GENESIS_HASH" ]]; then
 fi
 echo "    genesis hash = $GENESIS_HASH"
 
-# Build helper images before setting MIN_GENESIS_TIME (genesis window starts after step 5).
+# Pull helper images before setting MIN_GENESIS_TIME (genesis window starts after step 5).
 ensure_image "$LCLI_IMAGE"
 ensure_image "$BEACON_GENESIS_IMAGE"
 
