@@ -49,7 +49,7 @@ fi
 
 RETH_HTTP_PORT="${RETH_HTTP_PORT:-1545}"
 BN_HTTP_PORT="${BN_HTTP_PORT:-1052}"
-CHAIN_ID="${CHAIN_ID:-12345}"
+CHAIN_ID="${CHAIN_ID:-31337}"
 RPC_URL="${RPC_URL:-http://127.0.0.1:${RETH_HTTP_PORT}}"
 BEACON_URL="${BEACON_URL:-http://127.0.0.1:${BN_HTTP_PORT}}"
 PREFUNDED_ACCOUNT="${PREFUNDED_ACCOUNT:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}"
@@ -67,19 +67,13 @@ summary() {
   return 1
 }
 
-EL_ONLY=0
-RUN_TX=0
-for arg in "$@"; do
-  case "$arg" in
-    --el-only) EL_ONLY=1 ;;
-    --tx) RUN_TX=1 ;;
-    -h|--help)
-      echo "Usage: $0 [--el-only] [--tx]"
-      exit 0
-      ;;
-    *) echo "Unknown option: $arg" >&2; exit 2 ;;
-  esac
-done
+# Compare two non-negative integer strings (wei) without bash 64-bit overflow.
+wei_eq() {
+  python3 -c 'import sys; a=int(sys.argv[1]); b=int(sys.argv[2]); raise SystemExit(0 if a == b else 1)' "$1" "$2"
+}
+wei_sub() {
+  python3 -c 'import sys; print(int(sys.argv[1]) - int(sys.argv[2]))' "$1" "$2"
+}
 
 if ! command -v cast &>/dev/null; then
   echo "ERROR: cast not found. Install Foundry:" >&2
@@ -151,11 +145,14 @@ fi
 if [[ "$EL_ONLY" -eq 0 ]]; then
   echo "== Consensus layer (Beacon @ $BEACON_URL) =="
 
-  bn_health=$(curl -sf --connect-timeout 3 --max-time 10 "$BEACON_URL/eth/v1/node/health" || true)
-  if [[ -n "$bn_health" ]]; then
-    pass "beacon node reachable"
+  # Beacon API /eth/v1/node/health often returns an empty body; rely on HTTP status.
+  # 200 = ready, 206 = syncing but reachable (still PASS reachability).
+  bn_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 --max-time 10 \
+    "$BEACON_URL/eth/v1/node/health" || echo "000")
+  if [[ "$bn_code" == "200" || "$bn_code" == "206" ]]; then
+    pass "beacon node reachable (HTTP $bn_code)"
   else
-    fail "beacon node reachable"
+    fail "beacon node reachable (HTTP $bn_code)"
   fi
 
   head_json=$(curl -sf --connect-timeout 3 --max-time 10 "$BEACON_URL/eth/v1/beacon/headers/head" || true)
@@ -221,14 +218,14 @@ if [[ "$RUN_TX" -eq 1 ]]; then
     fail "send transaction"
   else
     bal_after=$($CAST balance "$TO_ADDR" 2>/dev/null || echo 0)
-    delta=$((bal_after - bal_before))
+    delta="$(wei_sub "$bal_after" "$bal_before")"
 
     echo "  from:  $(cast wallet address --private-key "$FROM_PK" 2>/dev/null)"
     echo "  to:    $TO_ADDR"
     echo "  tx:    $tx_hash"
     echo "  delta: $delta wei"
 
-    if [[ "$delta" == "$VALUE_WEI" ]]; then
+    if wei_eq "$delta" "$VALUE_WEI"; then
       pass "value transfer ($VALUE_WEI wei)"
     else
       fail "value transfer (delta=$delta)"
